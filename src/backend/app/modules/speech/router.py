@@ -5,13 +5,45 @@ from app.core.config import Settings, get_settings
 from app.core.db import get_db
 from app.core.deps import get_current_tutor, get_owned_child
 from app.models import Tutor
+from app.core.ratelimit import RateLimiter
 from app.modules.family.consent import has_consent
-from app.modules.speech.schemas import SpeechCheckOut
+from app.modules.speech.schemas import JudgeIn, JudgeOut, SpeechCheckOut
 from app.modules.speech.service import is_match
-from app.providers import get_speech_to_text
-from app.providers.base import SpeechToText
+from app.providers import get_judge_limiter, get_pronunciation_judge, get_speech_to_text
+from app.providers.base import PronunciationJudge, SpeechToText
 
 router = APIRouter(prefix="/speech", tags=["speech"])
+
+
+@router.post("/judge", response_model=JudgeOut)
+def judge_pronunciation(
+    data: JudgeIn,
+    tutor: Tutor = Depends(get_current_tutor),
+    db: Session = Depends(get_db),
+    judge: PronunciationJudge = Depends(get_pronunciation_judge),
+    limiter: RateLimiter = Depends(get_judge_limiter),
+):
+    """Segunda opinión con IA, para cuando las reglas locales de la app no aceptaron el intento.
+
+    Recibe SOLO el texto que reconoció el teléfono (nunca audio). Primero repite la comprobación
+    local, que es gratis e instantánea; la IA solo se consulta si esa comprobación falla.
+    """
+    get_owned_child(db, tutor, data.nino_id)
+
+    if not has_consent(db, tutor.id, "voz"):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "El tutor debe dar su consentimiento antes de usar el micrófono.",
+        )
+
+    if any(is_match(data.palabra, heard) for heard in data.escuchado):
+        return JudgeOut(resultado="acierto")
+    if not data.escuchado:  # el teléfono no entendió nada: no hay nada que juzgar
+        return JudgeOut(resultado="intentar_de_nuevo")
+
+    limiter.check(tutor.id)  # solo cuenta cuando realmente se va a gastar IA
+    ok = judge.judge(data.palabra, data.escuchado)
+    return JudgeOut(resultado="acierto" if ok else "intentar_de_nuevo")
 
 
 @router.post("/check", response_model=SpeechCheckOut)
