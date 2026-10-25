@@ -58,9 +58,11 @@ Todas las rutas, salvo `/auth/register`, `/auth/login` y `/health*`, exigen la c
 
 ## Despliegue (panel.iscoutb.dev)
 
-1. Construye la imagen desde `backend/` (`Dockerfile`).
-2. En el panel, define las variables de entorno de `.env.example`. La base de datos se conecta por su **host interno** (`DB_HOST`), nunca por el puerto externo.
-3. Las llaves (`GOOGLE_API_KEY`, `ELEVENLABS_API_KEY`) y `SECRET_KEY` se escriben solo en el panel.
-4. Comprueba `GET /health/db`.
+1. En el panel (Dokploy) usa *Build Type* **Dockerfile**, con *Docker File* `backend/Dockerfile` y *Docker Context Path* `backend`. Puerto del contenedor: `8000`. Usa la rama donde esté el código.
+2. En la pestaña **Environment** escribe las variables y pulsa **Save**. El panel las guarda en un `.env` junto al Dockerfile, que la imagen copia (por eso no subas ese `.env` a GitHub ni publiques la imagen):
+   - `SECRET_KEY` (mínimo 32 caracteres), `GOOGLE_API_KEY`, `ELEVENLABS_API_KEY`
+   - `DATABASE_URL`: copia la *Internal Connection URL* de la base de datos del panel. No escribas el host a mano.
+3. Pulsa **Deploy** y revisa los **Logs**: debe aparecer `Uvicorn running on http://0.0.0.0:8000`.
+4. Asigna un dominio (puerto `8000`; el automático `sslip.io` solo sirve por HTTP) y comprueba `/health/db` y `/docs`.
 
 > Los audios de las historias se guardan en `data/audio`. Si la plataforma reinicia el contenedor sin un volumen persistente, se vuelven a generar al pedirlos (cuesta una llamada a ElevenLabs por historia).
