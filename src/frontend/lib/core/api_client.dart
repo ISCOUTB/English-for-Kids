@@ -39,24 +39,28 @@ class ApiClient {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
-  Future<dynamic> get(String path) {
-    return _send(() => _http.get(_uri(path), headers: _headers));
+  Future<dynamic> get(String path, {Duration? timeout}) {
+    return _send(() => _http.get(_uri(path), headers: _headers), timeout);
   }
 
-  Future<dynamic> post(String path, {Object? body}) {
+  Future<dynamic> post(String path, {Object? body, Duration? timeout}) {
     return _send(
       () => _http.post(_uri(path), headers: _headers, body: jsonEncode(body)),
+      timeout,
     );
   }
 
-  Future<dynamic> delete(String path) {
-    return _send(() => _http.delete(_uri(path), headers: _headers));
+  Future<dynamic> delete(String path, {Duration? timeout}) {
+    return _send(() => _http.delete(_uri(path), headers: _headers), timeout);
   }
 
-  Future<dynamic> _send(Future<http.Response> Function() request) async {
+  Future<dynamic> _send(
+    Future<http.Response> Function() request,
+    Duration? timeout,
+  ) async {
     final http.Response res;
     try {
-      res = await request().timeout(AppConfig.requestTimeout);
+      res = await request().timeout(timeout ?? AppConfig.requestTimeout);
     } on TimeoutException {
       throw ApiException(
         'El servidor tardó demasiado en responder. Intenta de nuevo.',

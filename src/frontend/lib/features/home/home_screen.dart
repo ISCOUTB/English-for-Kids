@@ -13,6 +13,8 @@ import '../children/children_service.dart';
 import '../consent/consent_controller.dart';
 import '../consent/consent_screen.dart';
 import '../consent/consent_service.dart';
+import '../study/progress_repository.dart';
+import '../study/speech_judge_service.dart';
 
 /// Pantalla principal del tutor: elige con qué niño se juega y gestiona
 /// los perfiles y el permiso de voz.
@@ -35,6 +37,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final ChildrenController _children;
   late final ConsentController _consent;
+  late final SpeechJudgeService _speech;
+  final ProgressRepository _progress = ProgressRepository();
 
   @override
   void initState() {
@@ -44,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
       storage: widget.storage,
     );
     _consent = ConsentController(ConsentService(widget.api));
+    _speech = SpeechJudgeService(widget.api);
     _refresh();
   }
 
@@ -67,7 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChildHomeScreen(child: child, consent: _consent),
+        builder: (_) => ChildHomeScreen(
+          child: child,
+          consent: _consent,
+          speech: _speech,
+          progress: _progress,
+        ),
       ),
     );
   }

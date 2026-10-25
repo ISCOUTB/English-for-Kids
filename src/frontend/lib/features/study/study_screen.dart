@@ -1,0 +1,418 @@
+import 'package:flutter/material.dart';
+
+import '../vocabulary/audio_service.dart';
+import '../vocabulary/vocab_models.dart';
+import '../vocabulary/word_image.dart';
+import 'pronunciation_controller.dart';
+import 'study_config.dart';
+import 'study_session.dart';
+import 'talking_character.dart';
+
+/// Estudio de una palabra: imagen arriba; abajo, personaje en inglés,
+/// micrófono y personaje en español.
+class StudyScreen extends StatefulWidget {
+  const StudyScreen({
+    super.key,
+    required this.session,
+    required this.category,
+    required this.initialIndex,
+  });
+
+  final StudySession session;
+  final VocabCategory category;
+  final int initialIndex;
+
+  @override
+  State<StudyScreen> createState() => _StudyScreenState();
+}
+
+class _StudyScreenState extends State<StudyScreen> {
+  late int _index = widget.initialIndex;
+  late final StudyAudio _audio = StudyAudio();
+  late final PronunciationController _mic;
+
+  Word get _word => widget.category.words[_index];
+
+  @override
+  void initState() {
+    super.initState();
+    _mic = PronunciationController(
+      childId: widget.session.child.id,
+      judge: widget.session.speech,
+      progress: widget.session.progress,
+      consent: widget.session.consent,
+      audio: _audio,
+    )..setWord(_word);
+  }
+
+  @override
+  void dispose() {
+    _mic.dispose();
+    _audio.dispose();
+    super.dispose();
+  }
+
+  void _go(int delta) {
+    final count = widget.category.words.length;
+    setState(() => _index = (_index + delta + count) % count);
+    _audio.stop();
+    _mic.setWord(_word);
+  }
+
+  void _speak(Lang lang) {
+    _mic.setWord(_word); // si estaba escuchando, se cancela
+    _audio.speak(lang, _word);
+  }
+
+  void _onMic() {
+    if (!widget.session.consent.voiceAllowed) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Pídele a un adulto que active el permiso de voz.'),
+          ),
+        );
+      return;
+    }
+    _mic.toggle();
+  }
+
+  String _feedback(MicState state, bool allowed) {
+    switch (state) {
+      case MicState.listening:
+        return '¡Te escucho! 👂';
+      case MicState.processing:
+        return '';
+      case MicState.success:
+      case MicState.tryAgain:
+      case MicState.unavailable:
+        return _mic.message ?? '';
+      case MicState.ready:
+        return allowed ? 'Toca el micrófono y repite 🎤' : 'Voz sin permiso';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final word = _word;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.category.name,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: Listenable.merge(
+            [_audio, _mic, widget.session.consent],
+          ),
+          builder: (context, _) {
+            final allowed = widget.session.consent.voiceAllowed;
+
+            return Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            _ArrowButton(
+                              icon: Icons.chevron_left,
+                              onTap: () => _go(-1),
+                            ),
+                            Expanded(
+                              child: Material(
+                                color: Colors.white,
+                                clipBehavior: Clip.antiAlias,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                  side: const BorderSide(
+                                    color: Color(0xFFEADFCB),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: WordImage(word: word, emojiSize: 140),
+                                ),
+                              ),
+                            ),
+                            _ArrowButton(
+                              icon: Icons.chevron_right,
+                              onTap: () => _go(1),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: _CharacterColumn(
+                              language: Lang.en,
+                              caption: word.en,
+                              speaking: _audio.speaking,
+                              onTap: () => _speak(Lang.en),
+                            ),
+                          ),
+                          _MicButton(
+                            state: _mic.state,
+                            enabled: allowed,
+                            onTap: _onMic,
+                          ),
+                          Expanded(
+                            child: _CharacterColumn(
+                              language: Lang.es,
+                              caption: word.es,
+                              speaking: _audio.speaking,
+                              onTap: () => _speak(Lang.es),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 30,
+                        child: Center(
+                          child: Text(
+                            _feedback(_mic.state, allowed),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_mic.state == MicState.success)
+                  const Positioned.fill(
+                    child: IgnorePointer(child: _Celebration()),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onTap,
+      iconSize: 36,
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 80),
+      padding: EdgeInsets.zero,
+      icon: Icon(icon),
+    );
+  }
+}
+
+class _CharacterColumn extends StatelessWidget {
+  const _CharacterColumn({
+    required this.language,
+    required this.caption,
+    required this.speaking,
+    required this.onTap,
+  });
+
+  final Lang language;
+  final String caption;
+  final Lang? speaking;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TalkingCharacter(
+          folder: kCharacterFolder[language]!,
+          language: language,
+          speakingLanguage: speaking,
+          onTap: onTap,
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            caption,
+            maxLines: 1,
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MicButton extends StatefulWidget {
+  const _MicButton({
+    required this.state,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final MicState state;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_MicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    if (widget.state == MicState.listening) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final listening = widget.state == MicState.listening;
+
+    final Color background;
+    final Widget icon;
+    if (!widget.enabled) {
+      background = Colors.grey.shade400;
+      icon = const Icon(Icons.mic_off, color: Colors.white, size: 44);
+    } else {
+      switch (widget.state) {
+        case MicState.listening:
+          background = Colors.redAccent;
+          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+        case MicState.processing:
+          background = scheme.primary;
+          icon = const SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(strokeWidth: 4, color: Colors.white),
+          );
+        case MicState.success:
+          background = Colors.green;
+          icon = const Icon(Icons.star, color: Colors.white, size: 48);
+        case MicState.tryAgain:
+          background = scheme.primary;
+          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+        case MicState.unavailable:
+          background = Colors.grey.shade500;
+          icon = const Icon(Icons.mic_off, color: Colors.white, size: 44);
+        case MicState.ready:
+          background = scheme.primary;
+          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+      }
+    }
+
+    return Semantics(
+      button: true,
+      label: 'Micrófono',
+      child: SizedBox(
+        width: 128,
+        height: 128,
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (listening)
+                    Container(
+                      width: 96 + 30 * _pulse.value,
+                      height: 96 + 30 * _pulse.value,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: background.withValues(
+                          alpha: 0.28 * (1 - _pulse.value),
+                        ),
+                      ),
+                    ),
+                  child!,
+                ],
+              );
+            },
+            child: Material(
+              color: background,
+              shape: const CircleBorder(),
+              elevation: widget.enabled ? 4 : 0,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: widget.onTap,
+                child: SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: Center(child: icon),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Celebration extends StatelessWidget {
+  const _Celebration();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.2, end: 1.0),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.elasticOut,
+        builder: (context, value, child) =>
+            Transform.scale(scale: value, child: child),
+        child: const Text('🎉⭐🎉', style: TextStyle(fontSize: 84)),
+      ),
+    );
+  }
+}

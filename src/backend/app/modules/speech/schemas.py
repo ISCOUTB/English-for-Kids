@@ -18,6 +18,9 @@ class JudgeIn(BaseModel):
 
     nino_id: int
     palabra: str = Field(min_length=1, max_length=40, examples=["cat"])
+    idioma: Literal["en", "es"] = Field(
+        default="en", description="Idioma de la palabra objetivo: 'en' (inglés) o 'es' (español)"
+    )
     escuchado: list[str] = Field(
         max_length=5, description="Alternativas de transcripción, de la más a la menos probable"
     )

@@ -16,6 +16,7 @@ dependencies:
   http: ^1.6.0
   flutter_secure_storage: 9.2.4
   audioplayers: ^6.7.1
+  speech_to_text: 7.0.0
 
 dev_dependencies:
   flutter_test:
@@ -25,7 +26,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/vocabulary/
     - assets/images/
-    - assets/audio/
+    - assets/audio/ingles/
+    - assets/audio/espanol/
+    - assets/personajes/nino/
+    - assets/personajes/nina/

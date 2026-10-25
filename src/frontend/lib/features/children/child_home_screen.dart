@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/widgets.dart';
 import '../consent/consent_controller.dart';
+import '../study/progress_repository.dart';
+import '../study/speech_judge_service.dart';
+import '../study/study_session.dart';
 import '../vocabulary/card_colors.dart';
 import '../vocabulary/vocab_models.dart';
 import '../vocabulary/vocab_repository.dart';
@@ -16,12 +19,14 @@ class ChildHomeScreen extends StatefulWidget {
     super.key,
     required this.child,
     required this.consent,
+    required this.speech,
+    required this.progress,
   });
 
   final Child child;
-
-  /// Se usará en la sección 4 para activar el micrófono solo con permiso.
   final ConsentController consent;
+  final SpeechJudgeService speech;
+  final ProgressRepository progress;
 
   @override
   State<ChildHomeScreen> createState() => _ChildHomeScreenState();
@@ -29,6 +34,13 @@ class ChildHomeScreen extends StatefulWidget {
 
 class _ChildHomeScreenState extends State<ChildHomeScreen> {
   late final Future<List<VocabCategory>> _future = VocabularyRepository.load();
+
+  late final StudySession _session = StudySession(
+    child: widget.child,
+    consent: widget.consent,
+    speech: widget.speech,
+    progress: widget.progress,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -50,24 +62,29 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
             }
 
             if (snapshot.hasError) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: MessageBanner(
-                  text: 'No se pudo cargar el vocabulario. Revisa que exista '
-                      'assets/vocabulary/vocabulary.json y que esté declarado '
-                      'en pubspec.yaml.',
-                  icon: Icons.error_outline,
-                  isError: true,
+              return Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: MessageBanner(
+                    text: 'No se pudo cargar el vocabulario.\n\n'
+                        'Detalle: ${snapshot.error}',
+                    icon: Icons.error_outline,
+                    isError: true,
+                  ),
                 ),
               );
             }
 
             final categories = snapshot.data ?? const <VocabCategory>[];
             if (categories.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: MessageBanner(
-                  text: 'Todavía no hay categorías de vocabulario.',
+              return const Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: MessageBanner(
+                    text: 'Todavía no hay categorías de vocabulario.',
+                  ),
                 ),
               );
             }
@@ -95,6 +112,7 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
                       _CategoryCard(
                         category: categories[i],
                         color: cardColor(i),
+                        session: _session,
                       ),
                   ],
                 ),
@@ -108,10 +126,15 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
 }
 
 class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category, required this.color});
+  const _CategoryCard({
+    required this.category,
+    required this.color,
+    required this.session,
+  });
 
   final VocabCategory category;
   final Color color;
+  final StudySession session;
 
   Widget _cover() {
     final emoji = category.emoji;
@@ -146,7 +169,8 @@ class _CategoryCard extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => WordsScreen(category: category),
+              builder: (_) =>
+                  WordsScreen(category: category, session: session),
             ),
           );
         },

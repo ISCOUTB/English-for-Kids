@@ -1,35 +1,28 @@
 import 'package:flutter/material.dart';
 
-import 'audio_service.dart';
+import '../study/study_screen.dart';
+import '../study/study_session.dart';
 import 'card_colors.dart';
 import 'vocab_models.dart';
 import 'word_image.dart';
 
-/// Tarjetas de una categoría: al tocar una, suena la palabra.
-class WordsScreen extends StatefulWidget {
-  const WordsScreen({super.key, required this.category});
+/// Tarjetas de una categoría: al tocar una se abre la pantalla de estudio.
+class WordsScreen extends StatelessWidget {
+  const WordsScreen({
+    super.key,
+    required this.category,
+    required this.session,
+  });
 
   final VocabCategory category;
-
-  @override
-  State<WordsScreen> createState() => _WordsScreenState();
-}
-
-class _WordsScreenState extends State<WordsScreen> {
-  final AudioService _audio = AudioService();
-
-  @override
-  void dispose() {
-    _audio.dispose();
-    super.dispose();
-  }
+  final StudySession session;
 
   @override
   Widget build(BuildContext context) {
-    final words = widget.category.words;
+    final words = category.words;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.category.name)),
+      appBar: AppBar(title: Text(category.name)),
       body: SafeArea(
         child: GridView.builder(
           padding: const EdgeInsets.all(16),
@@ -43,7 +36,17 @@ class _WordsScreenState extends State<WordsScreen> {
           itemBuilder: (context, i) => _WordCard(
             word: words[i],
             color: cardColor(i),
-            onPlay: () => _audio.play(words[i]),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StudyScreen(
+                    session: session,
+                    category: category,
+                    initialIndex: i,
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -51,66 +54,46 @@ class _WordsScreenState extends State<WordsScreen> {
   }
 }
 
-class _WordCard extends StatefulWidget {
+class _WordCard extends StatelessWidget {
   const _WordCard({
     required this.word,
     required this.color,
-    required this.onPlay,
+    required this.onTap,
   });
 
   final Word word;
   final Color color;
-  final VoidCallback onPlay;
-
-  @override
-  State<_WordCard> createState() => _WordCardState();
-}
-
-class _WordCardState extends State<_WordCard> {
-  double _scale = 1;
-
-  Future<void> _tap() async {
-    widget.onPlay();
-    setState(() => _scale = 1.08);
-    await Future<void>.delayed(const Duration(milliseconds: 160));
-    if (!mounted) return;
-    setState(() => _scale = 1);
-  }
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return AnimatedScale(
-      scale: _scale,
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-      child: Material(
-        color: widget.color,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: InkWell(
-          onTap: _tap,
-          child: Column(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                  child: WordImage(word: widget.word),
-                ),
+    return Material(
+      color: color,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                child: WordImage(word: word),
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Text(
-                  widget.word.en,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Text(
+                word.en,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

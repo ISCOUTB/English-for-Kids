@@ -25,10 +25,11 @@ def judge_pronunciation(
 ):
     """Segunda opinión con IA, para cuando las reglas locales de la app no aceptaron el intento.
 
-    Recibe SOLO el texto que reconoció el teléfono (nunca audio). Primero repite la comprobación
-    local, que es gratis e instantánea; la IA solo se consulta si esa comprobación falla.
+    Recibe SOLO el texto que reconoció el teléfono (nunca audio). Sirve para inglés y español
+    (`idioma`). Primero repite la comprobación local, que es gratis e instantánea; la IA solo
+    se consulta si esa comprobación falla. Los niños de 3-4 años reciben más indulgencia.
     """
-    get_owned_child(db, tutor, data.nino_id)
+    child = get_owned_child(db, tutor, data.nino_id)
 
     if not has_consent(db, tutor.id, "voz"):
         raise HTTPException(
@@ -36,13 +37,14 @@ def judge_pronunciation(
             "El tutor debe dar su consentimiento antes de usar el micrófono.",
         )
 
-    if any(is_match(data.palabra, heard) for heard in data.escuchado):
+    lenient = child.rango_edad == "3-4"  # a menor edad, más indulgencia
+    if any(is_match(data.palabra, heard, lenient) for heard in data.escuchado):
         return JudgeOut(resultado="acierto")
     if not data.escuchado:  # el teléfono no entendió nada: no hay nada que juzgar
         return JudgeOut(resultado="intentar_de_nuevo")
 
     limiter.check(tutor.id)  # solo cuenta cuando realmente se va a gastar IA
-    ok = judge.judge(data.palabra, data.escuchado)
+    ok = judge.judge(data.palabra, data.escuchado, data.idioma, child.rango_edad)
     return JudgeOut(resultado="acierto" if ok else "intentar_de_nuevo")
 
 

@@ -121,15 +121,31 @@ class _ConsentScreenState extends State<ConsentScreen> {
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Para practicar la pronunciación, la app graba la voz del '
-                  'niño cuando toca el botón de hablar y envía esa grabación '
-                  'a un servicio externo que reconoce lo que dijo.',
+                const _ConsentPoint(
+                  icon: Icons.mic,
+                  text: 'La app usa el micrófono para que el niño repita las '
+                      'palabras y practique su pronunciación.',
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Sin tu permiso, el micrófono no se activa. Puedes '
-                  'revocarlo cuando quieras desde esta pantalla.',
+                const _ConsentPoint(
+                  icon: Icons.block,
+                  text: 'No guardamos grabaciones.',
+                ),
+                const _ConsentPoint(
+                  icon: Icons.phone_android,
+                  text: 'El reconocedor de voz del teléfono puede enviar el '
+                      'audio al servicio de Google o de Apple, según el '
+                      'dispositivo. Eso lo hace el sistema del teléfono, no '
+                      'nuestra app.',
+                ),
+                const _ConsentPoint(
+                  icon: Icons.text_fields,
+                  text: 'A nuestro servidor solo llega texto (lo que el '
+                      'teléfono entendió), nunca el audio.',
+                ),
+                const _ConsentPoint(
+                  icon: Icons.toggle_off_outlined,
+                  text: 'Sin tu permiso, el micrófono no se activa. Puedes '
+                      'revocarlo cuando quieras desde esta pantalla.',
                 ),
                 const SizedBox(height: 20),
                 if (_c.error != null) ...[
@@ -190,6 +206,28 @@ class _ConsentScreenState extends State<ConsentScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ConsentPoint extends StatelessWidget {
+  const _ConsentPoint({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text)),
+        ],
       ),
     );
   }

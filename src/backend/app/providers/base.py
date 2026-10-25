@@ -36,10 +36,14 @@ class TextToSpeech(Protocol):
 
 
 class PronunciationJudge(Protocol):
-    def judge(self, target: str, heard: list[str]) -> bool:
+    def judge(
+        self, target: str, heard: list[str], language: str = "en", age_range: str = "3-4"
+    ) -> bool:
         """¿Alguna de las transcripciones `heard` es un intento razonable de decir `target`?
 
-        Es una segunda opinión indulgente para niños de 3 a 6 años. Solo recibe texto.
+        `language` es el idioma de la palabra objetivo ("en" o "es") y `age_range` el rango
+        de edad del niño ("3-4" o "5-6"; a menor edad, más indulgente). Es una segunda
+        opinión para niños de 3 a 6 años. Solo recibe texto.
         """
         ...
 
