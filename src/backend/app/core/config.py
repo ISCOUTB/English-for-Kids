@@ -4,9 +4,11 @@ Todo se lee de variables de entorno (o de un archivo .env en desarrollo).
 Las llaves y contraseñas NUNCA van en el código ni en el repositorio.
 """
 
+import os
+import sys
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -79,6 +81,28 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
+def _explain_config_error(exc: ValidationError) -> str:
+    """Mensaje claro para el log del servidor. Muestra SOLO nombres, nunca valores."""
+    problems = ", ".join(sorted({".".join(str(p) for p in e["loc"]).upper() for e in exc.errors()}))
+    seen = sorted(os.environ)
+    ours = [n for n in seen if n.upper().startswith(("SECRET", "DB_", "DATABASE", "GOOGLE", "ELEVEN", "GEMINI", "CORS"))]
+    return (
+        "\n=== ERROR DE CONFIGURACION ===\n"
+        f"Faltan o son invalidas estas variables: {problems}\n"
+        f"El contenedor ve {len(seen)} variables de entorno en total.\n"
+        f"Las que parecen de English-for-Kids (solo nombres, entre comillas para ver espacios ocultos): "
+        f"{[repr(n) for n in ours] or 'NINGUNA'}\n"
+        "Si aparece NINGUNA: el panel no esta pasando las variables al contenedor "
+        "(revisa Environment > Save y luego Deploy).\n"
+        "Si el nombre aparece con espacios o simbolos raros: corrige el nombre en el panel.\n"
+    )
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    try:
+        return Settings()
+    except ValidationError as exc:
+        print(_explain_config_error(exc), file=sys.stderr, flush=True)
+        # "from None": no repetir el error original de pydantic, que puede incluir valores.
+        raise RuntimeError("Configuracion invalida: revisa el mensaje de arriba.") from None
