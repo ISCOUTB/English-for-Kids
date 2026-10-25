@@ -55,14 +55,13 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | ID | Nombre | Descripción | Prioridad | Criterio de aceptación |
 |---|---|---|---|---|
 | RF-01 | Reproducción de audio y vocabulario | El sistema reproduce la pronunciación en audio de elementos de vocabulario asociados a imágenes interactivas | Must | Al tocar la imagen, el audio suena en menos de 500 ms |
-| RF-02 | Reconocimiento de voz infantil | El sistema reconoce el intento de pronunciación con el reconocedor del teléfono y lo evalúa con reglas indulgentes, con una segunda opinión de IA cuando las reglas no lo aceptan (ADR-009) | Must | Ante un intento razonable de un niño, el sistema responde "acierto" en menos de 1 segundo en la mayoría de casos; sin conexión funciona con las reglas locales |
+| RF-02 | Reconocimiento de voz infantil | El sistema captura el intento de pronunciación por micrófono y lo envía al servicio de reconocimiento de voz | Must | El audio se procesa y se obtiene una transcripción |
 | RF-03 | Retroalimentación positiva no numérica | Tras un intento de voz, el sistema muestra refuerzo positivo (animación o frase) en lugar de puntajes | Should | Se muestra un mensaje tipo "¡Buen trabajo!" sin porcentajes |
 | RF-04 | Motor de aprendizaje adaptativo | El sistema registra aciertos y errores por concepto, estima el dominio y ajusta la frecuencia de aparición | Should | Los conceptos con menor dominio aparecen con más frecuencia |
 | RF-05 | Vista de progreso para tutores | Panel simplificado con exposición al vocabulario y evolución del niño | Could | El tutor ve un resumen gráfico claro del progreso histórico |
 | RF-06 | Generación de historias | El usuario selecciona palabras estudiadas o escribe otras y el sistema genera una historia corta apta para niños | Should (propuesta) | La historia usa las palabras elegidas, con lenguaje simple y sin contenido inapropiado |
 | RF-07 | Narración de historias | El sistema convierte el texto de la historia en audio y lo reproduce | Should (propuesta) | La historia se puede escuchar completa desde la app |
 | RF-08 | Canales de TV infantil | Sección para ver canales infantiles | Won't (mejora futura) | Fuera del alcance de la v1 (ADR-006) |
-| RF-09 | Inicio de sesión del tutor | El tutor se registra e inicia sesión con su nombre y su correo, y desde ahí administra los perfiles de sus niños | Must (propuesta) | Con nombre y correo correctos se obtiene una sesión; con datos incorrectos no, y un tutor nunca ve datos de otro (ADR-008) |
 
 ---
 
@@ -71,7 +70,7 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | ID | Nombre | Descripción | Prioridad | Criterio de aceptación |
 |---|---|---|---|---|
 | RNF-01 | Multiplataforma | App móvil en Flutter, compatible inicialmente con Android y con posibilidad de iOS | Must | El código compila y se ejecuta en dispositivos Android |
-| RNF-02 | Seguridad y privacidad | Protección de los datos de menores: cada petición verifica que el niño pertenezca al tutor de la sesión, se guardan datos mínimos y no se almacena el audio de la voz (ADR-007) | Must | Ningún usuario accede a registros de progreso ajenos |
+| RNF-02 | Seguridad y privacidad | Protección de los datos de menores con control de acceso por usuario (por ejemplo RLS si se usa PostgreSQL; ver ADR-007) | Must | Ningún usuario accede a registros de progreso ajenos |
 | RNF-03 | Arquitectura modular | Separación clara entre cliente, servicios de voz, base de datos y motor de aprendizaje (monolito modular, ADR-001) | Should | Se cambia el proveedor de voz modificando solo su módulo |
 | RNF-04 | Consentimiento del tutor | Antes de grabar la voz del niño o enviarla a un tercero, un adulto debe aceptar el tratamiento de datos | Must (propuesta) | El micrófono no se activa hasta que el tutor da su consentimiento |
 | RNF-05 | Protección de llaves de API | Las llaves de los proveedores solo existen en el backend (ADR-003) | Must (propuesta) | El código de la app no contiene ninguna llave secreta |
@@ -99,7 +98,7 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | Categoría | Requisitos |
 |---|---|
 | **Must** (primer sprint) | RF-01, RF-02, RNF-01, RNF-02 |
-| **Must** (adicionales, propuestos) | RF-09, RNF-04, RNF-05, RNF-06, RNF-07 |
+| **Must** (adicionales, propuestos) | RNF-04, RNF-05, RNF-06, RNF-07 |
 | **Should** (sprints siguientes) | RF-03, RF-04, RF-06, RF-07, RNF-03, RNF-08 |
 | **Could** (si hay tiempo) | RF-05, comparar proveedores de voz adicionales |
 | **Won't** (por ahora) | RF-08 (TV infantil), multilingüe avanzado, modo offline pesado |
@@ -113,12 +112,9 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | Actores | Solo el niño | Se necesita supervisión adulta | Se agrega el rol tutor y RF-05 |
 | Evaluación | Mostrar porcentajes de precisión | Las notas numéricas frustran a niños de 3–6 años | Refuerzo positivo y animaciones (RF-03); las métricas quedan internas y en el panel de tutores |
 | Reconocimiento de voz | Acoplado a un solo proveedor | Hay que comparar proveedores y validar voz infantil | Arquitectura modular (RNF-03); ElevenLabs como primera opción en lugar de Azure o Whisper (ADR-004) |
-| Reconocimiento de voz (revisión) | Voz a texto remoto (ElevenLabs) en cada intento | Demasiado lento para niños de 3 a 6 años y con costo por uso | Reconocimiento en el teléfono, reglas locales y IA como segunda opinión (ADR-009) |
 | Arquitectura | Microservicios | Un equipo pequeño y un solo servidor no justifican su costo | Monolito modular (ADR-001) |
 | Alcance | Incluía canales de TV | Riesgos de contenido y licencias, y poco aporte al objetivo | Aplazado como mejora futura (ADR-006) |
 | Despliegue | Plataforma externa | La universidad ofrece panel.iscoutb.dev | Backend en Docker en esa plataforma (ADR-005) |
-| Base de datos | Supabase | La plataforma de la universidad ya incluye PostgreSQL | PostgreSQL de la plataforma (ADR-007) |
-| Identificación | Solo se consideraba al niño | El adulto es quien administra la cuenta | El tutor inicia sesión con nombre y correo (RF-09, ADR-008) |
 
 ---
 

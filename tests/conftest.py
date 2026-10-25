@@ -20,13 +20,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.core.db import Base, get_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.providers import (  # noqa: E402
-    get_judge_limiter,
-    get_pronunciation_judge,
-    get_speech_to_text,
-    get_text_generator,
-    get_text_to_speech,
-)
+from app.providers import get_speech_to_text, get_text_generator, get_text_to_speech  # noqa: E402
 
 
 class FakeTextGenerator:
@@ -64,19 +58,6 @@ class FakeSTT:
         return self.reply
 
 
-class FakeJudge:
-    def __init__(self):
-        self.verdict = True
-        self.error: Exception | None = None
-        self.calls: list[tuple[str, list[str]]] = []
-
-    def judge(self, target, heard):
-        self.calls.append((target, heard))
-        if self.error:
-            raise self.error
-        return self.verdict
-
-
 @pytest.fixture(autouse=True)
 def fresh_state():
     """Cada prueba empieza con base de datos y caché de audio vacías."""
@@ -109,17 +90,6 @@ def stt():
     app.dependency_overrides[get_speech_to_text] = lambda: fake
     yield fake
     app.dependency_overrides.pop(get_speech_to_text, None)
-
-
-@pytest.fixture
-def judge():
-    fake = FakeJudge()
-    app.dependency_overrides[get_pronunciation_judge] = lambda: fake
-    # Cada prueba empieza con el contador de uso en cero.
-    get_judge_limiter.cache_clear()
-    yield fake
-    app.dependency_overrides.pop(get_pronunciation_judge, None)
-    get_judge_limiter.cache_clear()
 
 
 @pytest.fixture

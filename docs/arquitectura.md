@@ -55,7 +55,7 @@ Organizada **por funcionalidad** y no por tipo de archivo. Así cada parte se pu
 | Módulo | Responsabilidad | Requisitos |
 |---|---|---|
 | `vocabulary` | Mostrar imágenes interactivas y reproducir audio local | RF-01, RNF-01 |
-| `speech` | Reconocer la voz con el teléfono, aplicar el juez local (reglas y alias), consultar la segunda opinión si hace falta y mostrar la respuesta positiva | RF-02, RF-03 |
+| `speech` | Grabar la voz del niño, pedir el resultado al backend y mostrar la respuesta | RF-02, RF-03 |
 | `stories` | Elegir palabras, solicitar la historia y reproducir su narración | RF-06, RF-07 |
 | `progress` | Registrar intentos y mostrar avance al tutor | RF-04, RF-05 |
 | `parent_zone` | Consentimiento, ajustes y panel del tutor, protegido para que el niño no entre solo | RNF-04, RF-05 |
@@ -65,7 +65,7 @@ Organizada **por funcionalidad** y no por tipo de archivo. Así cada parte se pu
 | Módulo | Responsabilidad | Requisitos |
 |---|---|---|
 | `stories` | Armar el prompt con las palabras, pedir el texto, filtrar/moderar, generar el audio y guardar en caché | RF-06, RF-07, RNF-05, RNF-06 |
-| `speech` | `POST /speech/judge`: segunda opinión con IA a partir del texto reconocido; `POST /speech/check`: respaldo que recibe audio y lo transcribe con ElevenLabs | RF-02, RF-03 |
+| `speech` | Recibir el audio, obtener la transcripción y compararla con la palabra objetivo | RF-02, RF-03 |
 | `progress` | Guardar aciertos y errores por palabra y calcular el dominio estimado *(pendiente de implementar)* | RF-04, RF-05 |
 | `auth` | Registro e inicio de sesión del tutor con nombre y correo; entrega el token de sesión (ADR-008) | RF-09, RNF-02 |
 | `family` | Perfiles de niños, consentimiento del tutor y borrado de datos; regla "cada niño pertenece a un tutor" | RNF-02, RNF-04 |
@@ -82,14 +82,12 @@ Organizada **por funcionalidad** y no por tipo de archivo. Así cada parte se pu
 2. La app reproduce el audio **local**. No interviene el backend ni la red.
 
 ### 4.2 Repetir una palabra (RF-02, RF-03, RF-04)
-1. El niño toca el micrófono (solo si el tutor dio el consentimiento).
-2. El **teléfono** reconoce lo que dijo y entrega varias alternativas de texto. El audio no llega a nuestro backend.
-3. La app aplica el **juez local**: normaliza el texto y lo compara con la palabra, su clave fonética y sus alias. Si acepta, termina aquí (instantáneo, sin conexión).
-4. Si no acepta y hay conexión, la app envía solo el **texto** a `POST /speech/judge`. El backend repite la comprobación local y, si también falla, pregunta a Gemini (booleano, temperatura 0, entrada sanitizada).
-5. Si la segunda opinión falla o tarda más de unos 3 segundos, la app trata el intento como "intentar otra vez".
-6. La app muestra una animación o frase positiva **local** (nunca porcentajes ni mensajes generados por la IA) y se registra el intento para el módulo `progress`.
-
-Decisión y alternativas: ADR-009.
+1. La app graba el intento del niño (solo si el tutor dio el consentimiento).
+2. Envía el audio y el identificador de la palabra al backend.
+3. El módulo `speech` obtiene la transcripción mediante la interfaz `SpeechToText`.
+4. Compara la transcripción con la palabra objetivo (normalizando mayúsculas, signos y variantes simples).
+5. Devuelve un resultado **categórico** ("acierto" o "intentar otra vez"), sin porcentajes.
+6. La app muestra una animación o frase positiva y el módulo `progress` registra el intento.
 
 ### 4.3 Crear una historia (RF-06, RF-07)
 1. El niño o el tutor elige palabras estudiadas o escribe otras.
@@ -152,7 +150,7 @@ tests/
 | Requisito | Componente principal |
 |---|---|
 | RF-01 | `vocabulary` (app) |
-| RF-02 | `speech` (app: reconocedor del teléfono y juez local; backend: `/speech/judge`) + `PronunciationJudge` |
+| RF-02 | `speech` (app y backend) + `SpeechToText` |
 | RF-03 | `speech` (app) |
 | RF-04 | `progress` (backend) |
 | RF-05 | `progress` y `parent_zone` |

@@ -35,15 +35,6 @@ class TextToSpeech(Protocol):
         ...
 
 
-class PronunciationJudge(Protocol):
-    def judge(self, target: str, heard: list[str]) -> bool:
-        """¿Alguna de las transcripciones `heard` es un intento razonable de decir `target`?
-
-        Es una segunda opinión indulgente para niños de 3 a 6 años. Solo recibe texto.
-        """
-        ...
-
-
 class SpeechToText(Protocol):
     def transcribe(self, audio: bytes, content_type: str | None = None) -> str:
         """Devuelve la transcripción en inglés del audio."""
