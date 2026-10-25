@@ -90,6 +90,7 @@ def _explain_config_error(exc: ValidationError) -> str:
         "\n=== ERROR DE CONFIGURACION ===\n"
         f"Faltan o son invalidas estas variables: {problems}\n"
         f"El contenedor ve {len(seen)} variables de entorno en total.\n"
+        f"Archivo .env en {os.getcwd()}: {'SI existe' if os.path.exists('.env') else 'NO existe'}\n"
         f"Las que parecen de English-for-Kids (solo nombres, entre comillas para ver espacios ocultos): "
         f"{[repr(n) for n in ours] or 'NINGUNA'}\n"
         "Si aparece NINGUNA: el panel no esta pasando las variables al contenedor "
