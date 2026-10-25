@@ -1,0 +1,84 @@
+"""Configuración del backend.
+
+Todo se lee de variables de entorno (o de un archivo .env en desarrollo).
+Las llaves y contraseñas NUNCA van en el código ni en el repositorio.
+"""
+
+from functools import lru_cache
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # --- Base de datos -------------------------------------------------
+    # Opción A: una URL completa (por ejemplo la "Internal Connection URL"
+    # que muestra el panel). Tiene prioridad si está definida.
+    database_url: str | None = None
+    # Opción B: por partes. Es más cómoda porque la contraseña puede tener
+    # caracteres especiales sin que haya que codificarlos en una URL.
+    db_user: str = "postgres"
+    db_password: str = ""
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "postgres"
+
+    # --- Seguridad -----------------------------------------------------
+    secret_key: str  # obligatoria: firma los tokens de sesión
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 días
+    # Orígenes permitidos por CORS, separados por coma. Una app móvil nativa
+    # NO necesita CORS; solo hace falta si se prueba una versión web.
+    cors_origins: str = ""
+
+    # --- Proveedores externos (las llaves las pones tú en el entorno) ----
+    google_api_key: str = ""
+    gemini_model: str = "gemini-3.6-flash"
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "hpp4J3VqNfWAUOO0d1Us"
+    elevenlabs_tts_model: str = "eleven_multilingual_v2"
+    elevenlabs_stt_model: str = "scribe_v2"
+
+    # --- Límites y almacenamiento -------------------------------------
+    audio_dir: str = "data/audio"  # carpeta de audios de historias (caché)
+    max_audio_bytes: int = 5_000_000  # tamaño máximo del audio del niño
+    daily_story_limit: int = 20  # historias por tutor y por día
+
+    @field_validator("secret_key")
+    @classmethod
+    def _secret_key_must_be_long(cls, value: str) -> str:
+        if len(value) < 32:
+            raise ValueError(
+                "SECRET_KEY debe tener al menos 32 caracteres. Genera una con: "
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+            )
+        return value
+
+    @property
+    def sqlalchemy_url(self) -> str | URL:
+        if self.database_url:
+            url = self.database_url
+            # El panel entrega "postgresql://..."; usamos el driver psycopg 3.
+            for prefix in ("postgres://", "postgresql://"):
+                if url.startswith(prefix):
+                    return "postgresql+psycopg://" + url[len(prefix):]
+            return url
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.db_user,
+            password=self.db_password,
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
+        )
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
