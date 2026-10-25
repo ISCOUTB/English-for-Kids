@@ -43,7 +43,7 @@ class GeminiTextGenerator:
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=0.8,
-            max_output_tokens=1024,
+            max_output_tokens=4096,  # los modelos con "pensamiento" gastan parte de este límite
             safety_settings=_SAFETY,
         )
         try:
@@ -105,21 +105,37 @@ class GeminiPronunciationJudge:
             f"<objetivo>{target}</objetivo>\n"
             f"<escuchado>{json.dumps(heard, ensure_ascii=False)}</escuchado>"
         )
-        config = types.GenerateContentConfig(
-            system_instruction=JUDGE_SYSTEM,
-            temperature=0.0,  # lo más estable posible: mismo intento, misma respuesta
-            max_output_tokens=64,
-            response_mime_type="application/json",
-            response_schema=_Verdict,
-        )
-        try:
+        def make_config(fast: bool) -> types.GenerateContentConfig:
+            return types.GenerateContentConfig(
+                system_instruction=JUDGE_SYSTEM,
+                temperature=0.0,  # lo más estable posible: mismo intento, misma respuesta
+                # Los modelos con "pensamiento" gastan este límite pensando; si es muy corto
+                # la respuesta llega vacía (fue el fallo real de la primera prueba).
+                max_output_tokens=1024,
+                response_mime_type="application/json",
+                response_schema=_Verdict,
+                # Para un sí/no no hace falta razonar: menos latencia y menos costo.
+                thinking_config=types.ThinkingConfig(thinking_level="MINIMAL") if fast else None,
+            )
+
+        def ask(fast: bool) -> bool:
             response = self._get_client().models.generate_content(
-                model=self._model, contents=prompt, config=config
+                model=self._model, contents=prompt, config=make_config(fast)
             )
             parsed = response.parsed
             if isinstance(parsed, _Verdict):
                 return parsed.valido
             return bool(_Verdict.model_validate(json.loads(response.text or "")).valido)
+
+        try:
+            try:
+                return ask(fast=True)
+            except ProviderError:
+                raise
+            except Exception:
+                # Algunos modelos no aceptan ese nivel de pensamiento: se reintenta sin él.
+                log.warning("Juez Gemini: reintento sin thinking_config", exc_info=True)
+                return ask(fast=False)
         except ProviderError:
             raise
         except Exception as exc:  # respuesta vacía, JSON inválido o fallo de red
