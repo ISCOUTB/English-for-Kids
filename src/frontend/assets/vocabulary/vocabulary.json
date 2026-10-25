@@ -1,0 +1,515 @@
+{
+  "categories": [
+    {
+      "id": "action",
+      "name": "Acciones",
+      "emoji": "🏃",
+      "cover": "action.png",
+      "words": [
+        {
+          "id": "call",
+          "en": "call",
+          "image": "call.png",
+          "audio": "call.mp3",
+          "emoji": "📞"
+        },
+        {
+          "id": "draw",
+          "en": "draw",
+          "image": "draw.png",
+          "audio": "draw.mp3",
+          "emoji": "🎨"
+        },
+        {
+          "id": "fly",
+          "en": "fly",
+          "image": "fly.png",
+          "audio": "fly.mp3",
+          "emoji": "🕊️"
+        },
+        {
+          "id": "hug",
+          "en": "hug",
+          "image": "hug.png",
+          "audio": "hug.mp3",
+          "emoji": "🤗"
+        },
+        {
+          "id": "jump",
+          "en": "jump",
+          "image": "jump.png",
+          "audio": "jump.mp3",
+          "emoji": "🤸"
+        },
+        {
+          "id": "play",
+          "en": "play",
+          "image": "play.png",
+          "audio": "play.mp3",
+          "emoji": "🧸"
+        },
+        {
+          "id": "run",
+          "en": "run",
+          "image": "run.png",
+          "audio": "run.mp3",
+          "emoji": "🏃"
+        },
+        {
+          "id": "walk",
+          "en": "walk",
+          "image": "walk.png",
+          "audio": "walk.mp3",
+          "emoji": "🚶"
+        }
+      ]
+    },
+    {
+      "id": "clothes",
+      "name": "Ropa",
+      "emoji": "👕",
+      "cover": "clothes.png",
+      "words": [
+        {
+          "id": "blouse",
+          "en": "blouse",
+          "image": "blouse.png",
+          "audio": "blouse.mp3",
+          "emoji": "👚"
+        },
+        {
+          "id": "boot",
+          "en": "boot",
+          "image": "boot.png",
+          "audio": "boot.mp3",
+          "emoji": "🥾"
+        },
+        {
+          "id": "coat",
+          "en": "coat",
+          "image": "coat.jpg",
+          "audio": "coat.mp3",
+          "emoji": "🧥"
+        },
+        {
+          "id": "dress",
+          "en": "dress",
+          "image": "dress.png",
+          "audio": "dress.mp3",
+          "emoji": "👗"
+        },
+        {
+          "id": "pants",
+          "en": "pants",
+          "image": "pants.png",
+          "audio": "pants.mp3",
+          "emoji": "👖"
+        },
+        {
+          "id": "shirt",
+          "en": "shirt",
+          "image": "shirt.png",
+          "audio": "shirt.mp3",
+          "emoji": "👕"
+        },
+        {
+          "id": "shoe",
+          "en": "shoe",
+          "image": "shoe.jpg",
+          "audio": "shoe.mp3",
+          "emoji": "👟"
+        },
+        {
+          "id": "skirt",
+          "en": "skirt",
+          "image": "skirt.png",
+          "audio": "skirt.mp3",
+          "emoji": "👗"
+        }
+      ]
+    },
+    {
+      "id": "colors",
+      "name": "Colores",
+      "emoji": "🎨",
+      "cover": "colors.png",
+      "words": [
+        {
+          "id": "black",
+          "en": "black",
+          "image": "black.png",
+          "audio": "black.mp3",
+          "emoji": "⚫"
+        },
+        {
+          "id": "blue",
+          "en": "blue",
+          "image": "blue.png",
+          "audio": "blue.mp3",
+          "emoji": "🔵"
+        },
+        {
+          "id": "green",
+          "en": "green",
+          "image": "green.png",
+          "audio": "green.mp3",
+          "emoji": "🟢"
+        },
+        {
+          "id": "purple",
+          "en": "purple",
+          "image": "purple.png",
+          "audio": "purple.mp3",
+          "emoji": "🟣"
+        },
+        {
+          "id": "red",
+          "en": "red",
+          "image": "red.png",
+          "audio": "red.mp3",
+          "emoji": "🔴"
+        },
+        {
+          "id": "white",
+          "en": "white",
+          "image": "white.png",
+          "audio": "white.mp3",
+          "emoji": "⚪"
+        },
+        {
+          "id": "yellow",
+          "en": "yellow",
+          "image": "yellow.png",
+          "audio": "yellow.mp3",
+          "emoji": "🟡"
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Naturaleza",
+      "emoji": "🌳",
+      "cover": "nature.png",
+      "words": [
+        {
+          "id": "cloud",
+          "en": "cloud",
+          "image": "cloud.png",
+          "audio": "cloud.mp3",
+          "emoji": "☁️"
+        },
+        {
+          "id": "fire",
+          "en": "fire",
+          "image": "fire.png",
+          "audio": "fire.mp3",
+          "emoji": "🔥"
+        },
+        {
+          "id": "flowers",
+          "en": "flowers",
+          "image": "flowers.png",
+          "audio": "flowers.mp3",
+          "emoji": "🌸"
+        },
+        {
+          "id": "grass",
+          "en": "grass",
+          "image": "grass.png",
+          "audio": "grass.mp3",
+          "emoji": "🌱"
+        },
+        {
+          "id": "planet",
+          "en": "planet",
+          "image": "planet.png",
+          "audio": "planet.mp3",
+          "emoji": "🪐"
+        },
+        {
+          "id": "snow",
+          "en": "snow",
+          "image": "snow.png",
+          "audio": "snow.mp3",
+          "emoji": "❄️"
+        },
+        {
+          "id": "star",
+          "en": "star",
+          "image": "star.png",
+          "audio": "star.mp3",
+          "emoji": "⭐"
+        },
+        {
+          "id": "tree",
+          "en": "tree",
+          "image": "tree.png",
+          "audio": "tree.mp3",
+          "emoji": "🌳"
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "name": "Transporte",
+      "emoji": "🚌",
+      "cover": "transport.png",
+      "words": [
+        {
+          "id": "airplane",
+          "en": "airplane",
+          "image": "airplane.png",
+          "audio": "airplane.mp3",
+          "emoji": "✈️"
+        },
+        {
+          "id": "bicycle",
+          "en": "bicycle",
+          "image": "bicycle.png",
+          "audio": "bicycle.mp3",
+          "emoji": "🚲"
+        },
+        {
+          "id": "bus",
+          "en": "bus",
+          "image": "bus.png",
+          "audio": "bus.mp3",
+          "emoji": "🚌"
+        },
+        {
+          "id": "car",
+          "en": "car",
+          "image": "car.png",
+          "audio": "car.mp3",
+          "emoji": "🚗"
+        },
+        {
+          "id": "rocket",
+          "en": "rocket",
+          "image": "rocket.png",
+          "audio": "rocket.mp3",
+          "emoji": "🚀"
+        },
+        {
+          "id": "scooter",
+          "en": "scooter",
+          "image": "scooter.png",
+          "audio": "scooter.mp3",
+          "emoji": "🛴"
+        },
+        {
+          "id": "skateboard",
+          "en": "skateboard",
+          "image": "skateboard.png",
+          "audio": "skateboard.mp3",
+          "emoji": "🛹"
+        },
+        {
+          "id": "taxi",
+          "en": "taxi",
+          "image": "taxi.png",
+          "audio": "taxi.mp3",
+          "emoji": "🚕"
+        }
+      ]
+    },
+    {
+      "id": "vegetables",
+      "name": "Verduras",
+      "emoji": "🥕",
+      "cover": "vegetables.png",
+      "words": [
+        {
+          "id": "carrot",
+          "en": "carrot",
+          "image": "carrot.png",
+          "audio": "carrot.mp3",
+          "emoji": "🥕"
+        },
+        {
+          "id": "cucumber",
+          "en": "cucumber",
+          "image": "cucumber.png",
+          "audio": "cucumber.mp3",
+          "emoji": "🥒"
+        },
+        {
+          "id": "eggplant",
+          "en": "eggplant",
+          "image": "eggplant.png",
+          "audio": "eggplant.mp3",
+          "emoji": "🍆"
+        },
+        {
+          "id": "onion",
+          "en": "onion",
+          "image": "onion.png",
+          "audio": "onion.mp3",
+          "emoji": "🧅"
+        },
+        {
+          "id": "pepper",
+          "en": "pepper",
+          "image": "pepper.png",
+          "audio": "pepper.mp3",
+          "emoji": "🫑"
+        },
+        {
+          "id": "potato",
+          "en": "potato",
+          "image": "potato.png",
+          "audio": "potato.mp3",
+          "emoji": "🥔"
+        },
+        {
+          "id": "pumpkin",
+          "en": "pumpkin",
+          "image": "pumpkin.png",
+          "audio": "pumpkin.mp3",
+          "emoji": "🎃"
+        },
+        {
+          "id": "tomato",
+          "en": "tomato",
+          "image": "tomato.png",
+          "audio": "tomato.mp3",
+          "emoji": "🍅"
+        }
+      ]
+    },
+    {
+      "id": "fruits",
+      "name": "Frutas",
+      "emoji": "🍎",
+      "words": [
+        {
+          "id": "apple",
+          "en": "apple",
+          "image": "apple.png",
+          "audio": "apple.mp3",
+          "emoji": "🍎"
+        },
+        {
+          "id": "banana",
+          "en": "banana",
+          "image": "bananas.png",
+          "audio": "banana.mp3",
+          "emoji": "🍌"
+        },
+        {
+          "id": "blueberry",
+          "en": "blueberry",
+          "image": "blueberry.png",
+          "audio": "blueberry.mp3",
+          "emoji": "🫐"
+        },
+        {
+          "id": "cherry",
+          "en": "cherry",
+          "image": "cherry.png",
+          "audio": "cherry.mp3",
+          "emoji": "🍒"
+        },
+        {
+          "id": "grapes",
+          "en": "grapes",
+          "image": "grapes.png",
+          "audio": "grapes.mp3",
+          "emoji": "🍇"
+        },
+        {
+          "id": "orange",
+          "en": "orange",
+          "image": "orange.png",
+          "audio": "orange.mp3",
+          "emoji": "🍊"
+        },
+        {
+          "id": "pear",
+          "en": "pear",
+          "image": "pear.png",
+          "audio": "pear.mp3",
+          "emoji": "🍐"
+        },
+        {
+          "id": "raspberry",
+          "en": "raspberry",
+          "image": "raspberry.png",
+          "audio": "raspberry.mp3",
+          "emoji": "🍓"
+        },
+        {
+          "id": "strawberry",
+          "en": "strawberry",
+          "image": "strawberry.png",
+          "audio": "strawberry.mp3",
+          "emoji": "🍓"
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "name": "Mis cosas",
+      "emoji": "🧸",
+      "cover": "other.png",
+      "words": [
+        {
+          "id": "ball",
+          "en": "ball",
+          "image": "ball.png",
+          "audio": "ball.mp3",
+          "emoji": "⚽"
+        },
+        {
+          "id": "books",
+          "en": "books",
+          "image": "books.png",
+          "audio": "books.mp3",
+          "emoji": "📚"
+        },
+        {
+          "id": "bottle",
+          "en": "bottle",
+          "image": "bottle.png",
+          "audio": "bottle.mp3",
+          "emoji": "🍼"
+        },
+        {
+          "id": "clock",
+          "en": "clock",
+          "image": "clock.png",
+          "audio": "clock.mp3",
+          "emoji": "🕒"
+        },
+        {
+          "id": "cookie",
+          "en": "cookie",
+          "image": "cookie.png",
+          "audio": "cookie.mp3",
+          "emoji": "🍪"
+        },
+        {
+          "id": "cup",
+          "en": "cup",
+          "image": "cup.png",
+          "audio": "cup.mp3",
+          "emoji": "☕"
+        },
+        {
+          "id": "pencil",
+          "en": "pencil",
+          "image": "pencil.png",
+          "audio": "pencil.mp3",
+          "emoji": "✏️"
+        },
+        {
+          "id": "toothbrush",
+          "en": "toothbrush",
+          "image": "toothbrush.png",
+          "audio": "toothbrush.mp3",
+          "emoji": "🪥"
+        }
+      ]
+    }
+  ]
+}
