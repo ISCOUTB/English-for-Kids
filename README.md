@@ -15,7 +15,7 @@ backend/
     models.py    tablas (modelo entidad-relación)
     main.py
   Dockerfile
-tests/           48 pruebas automáticas (no llaman a servicios externos)
+tests/           68 pruebas automáticas (no llaman a servicios externos)
 docs/
 ```
 
@@ -51,7 +51,8 @@ pytest
 | `POST/GET /consents` | Consentimiento de voz del tutor (aceptar o revocar) |
 | `POST /stories` · `GET /stories?nino_id=` · `GET /stories/{id}` | Crear y consultar historias |
 | `GET /stories/{id}/audio` | Narración en mp3 (se genera una vez y se guarda en caché) |
-| `POST /speech/check` | Comprueba si el niño dijo la palabra (requiere consentimiento) |
+| `POST /speech/judge` | Segunda opinión con IA: recibe el **texto** que reconoció el teléfono y responde `acierto` o `intentar_de_nuevo` (requiere consentimiento) |
+| `POST /speech/check` | Respaldo: recibe el **audio**, lo transcribe con ElevenLabs y compara (requiere consentimiento) |
 | `GET /health` · `GET /health/db` | Estado del servicio y de la base de datos |
 
 Todas las rutas, salvo `/auth/register`, `/auth/login` y `/health*`, exigen la cabecera `Authorization: Bearer <token>`.

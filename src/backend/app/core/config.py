@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     audio_dir: str = "data/audio"  # carpeta de audios de historias (caché)
     max_audio_bytes: int = 5_000_000  # tamaño máximo del audio del niño
     daily_story_limit: int = 20  # historias por tutor y por día
+    judge_hourly_limit: int = 120  # consultas al juez de IA por tutor y por hora
 
     @field_validator("secret_key")
     @classmethod

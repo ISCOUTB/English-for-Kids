@@ -15,6 +15,7 @@
 | ADR-006 | Canales de TV infantil (iptv-org) aplazados | Aceptada |
 | ADR-007 | Base de datos: PostgreSQL de la plataforma | Aceptada |
 | ADR-008 | Inicio de sesión del tutor con nombre y correo | Aceptada (con riesgo conocido) |
+| ADR-009 | Reconocimiento de voz en el dispositivo y IA como segunda opinión | Aceptada (backend listo; app pendiente) |
 
 ---
 
@@ -90,6 +91,7 @@
 - (+) Permite comparar proveedores con pruebas reales.
 - (−) Un poco más de código al inicio.
 - Se usa el SDK actual de Google (`google-genai`): el que usaba el prototipo (`google-generativeai`) está en desuso desde noviembre de 2025. Para voz a texto se usa ElevenLabs (modelo `scribe_v2`, configurable).
+- Actualización (ADR-009): el reconocimiento de voz de cada intento pasa al teléfono; ElevenLabs se conserva para la narración (texto a voz) y como respaldo de voz a texto.
 - ⚠️ **Por validar:** la precisión del reconocimiento con voz infantil, la latencia y el costo de cada proveedor. Las llamadas reales a Google y ElevenLabs aún no se han probado con llaves; las pruebas automáticas usan proveedores simulados.
 
 ---
@@ -170,3 +172,33 @@
 - (−) **El nombre no es un secreto:** quien conozca el nombre y el correo de un tutor puede entrar como él, ver el progreso e historias de sus niños y borrar sus perfiles.
 - Mitigaciones actuales: los niños solo tienen apodo y rango de edad; no se guarda el audio de su voz; los tokens vencen; y cada recurso se verifica contra el tutor de la sesión.
 - ⚠️ **Mejora prevista:** reemplazar el nombre por un código enviado al correo antes de abrir la app a usuarios reales. Está pendiente averiguar si la universidad ofrece un servicio de correo.
+
+---
+
+## ADR-009 — Reconocimiento de voz en el dispositivo y IA como segunda opinión
+
+**Estado:** Aceptada (el backend ya está implementado; la app debe implementarlo en la Sección 4)
+
+**Contexto.** Enviar el audio de cada intento a ElevenLabs implica subir el archivo, esperar la respuesta y gastar cuota; para niños de 3 a 6 años esa espera es demasiado larga. Además, los niños pequeños pronuncian de forma imprecisa, así que una comparación estricta de texto rechazaría casi todo. Se propuso usar un LLM como "juez indulgente".
+
+**Decisión.**
+1. El reconocimiento lo hace el sistema del teléfono (paquete `speech_to_text`, idioma en-US), y se recogen todas las alternativas que entrega.
+2. **Primer juez, local y en la app:** normalización del texto, clave fonética, distancia de edición solo en palabras largas y una lista de **alias** por palabra. Los alias se generan **una sola vez** con Gemini (`app/tools/aliases.py`) y se revisan a mano.
+3. **Segunda opinión con IA, solo si falla la local y hay conexión:** la app llama a `POST /speech/judge` con el **texto** reconocido (nunca audio). El backend repite primero la comprobación local y solo consulta a Gemini si esa también falla, con salida JSON estructurada (un booleano), temperatura 0 y entrada sanitizada contra inyección de instrucciones.
+4. `POST /speech/check` (audio → ElevenLabs) se conserva como respaldo y para comparar proveedores.
+5. Los mensajes motivadores son locales: la IA nunca decide qué texto ve el niño.
+
+**Alternativas consideradas.**
+- *Voz a texto remoto en cada intento (la versión anterior):* lento, con costo por uso, y el audio sale del teléfono.
+- *LLM como único juez:* solo ve texto, así que no recupera el sonido que el reconocedor ya perdió; añade una llamada de red a cada intento y no es determinista.
+- *Enviar el audio directamente a un modelo multimodal:* descartada por ahora; en el teléfono el micrófono no se comparte bien entre el reconocedor y una grabadora, y el audio de menores saldría hacia un tercero. Queda como experimento futuro.
+
+**Consecuencias.**
+- (+) La mayoría de intentos se resuelven al instante, gratis y sin conexión, con reglas que se prueban de forma automática.
+- (+) La IA solo recibe un texto corto (palabra y alternativas), sin audio ni datos del niño, y su uso tiene un límite de 120 consultas por hora y por tutor.
+- (−) **El reconocedor del sistema puede enviar el audio a Google o Apple**, según el teléfono, y no lo controlamos. El texto de la pantalla de consentimiento debe decirlo con claridad (el actual afirma que la app envía la grabación a un servicio externo y hay que corregirlo).
+- (−) Depende de que el teléfono tenga reconocimiento de voz disponible; si no, se usa el respaldo.
+- (−) Las condiciones de la capa gratuita de Google pueden permitir usar los textos enviados para mejorar sus productos: hay que verificarlo antes de usarla con familias reales.
+- (−) El límite de uso vive en la memoria del contenedor y se reinicia con él.
+- (−) Un juez indulgente puede aceptar de más. Es intencional para esta edad, y se ajusta con pruebas reales.
+- ⚠️ **Por validar:** qué tan bien reconoce el sistema las voces de niños pequeños, y comparar latencia y acierto entre la regla local, `/speech/judge` y `/speech/check` con la pantalla de depuración de la app.
