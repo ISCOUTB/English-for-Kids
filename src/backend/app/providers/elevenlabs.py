@@ -24,22 +24,32 @@ class _ElevenLabsBase:
 
 
 class ElevenLabsTTS(_ElevenLabsBase):
-    def __init__(self, api_key: str, voice_id: str, model_id: str):
+    def __init__(self, api_key: str, voice_id: str, model_id: str, voice_id_es: str | None = None):
         super().__init__(api_key)
-        self._voice_id = voice_id
+        self._voice_id = voice_id  # inglés
+        self._voice_id_es = voice_id_es or voice_id
         self._model_id = model_id
 
-    def synthesize(self, text: str) -> bytes:
+    def synthesize(self, text: str, language: str = "es") -> bytes:
+        voice_id = self._voice_id_es if language == "es" else self._voice_id
         try:
             chunks = self._get_client().text_to_speech.convert(
-                voice_id=self._voice_id, model_id=self._model_id, text=text
+                voice_id=voice_id, model_id=self._model_id, text=text
             )
             audio = b"".join(chunks)
         except ProviderError:
             raise
         except Exception as exc:
-            log.exception("Fallo al generar audio con ElevenLabs")
-            raise ProviderError(f"ElevenLabs TTS: {type(exc).__name__}") from exc
+            # El SDK de ElevenLabs trae el código HTTP y el cuerpo de la respuesta: son lo
+            # que dice la causa real (llave inválida, voz de pago, cuota agotada...).
+            status = getattr(exc, "status_code", None)
+            body = getattr(exc, "body", None)
+            log.error(
+                "Fallo al generar audio con ElevenLabs (voz=%s, idioma=%s, http=%s): %s | %s",
+                voice_id, language, status, type(exc).__name__, body,
+                exc_info=True,
+            )
+            raise ProviderError(f"ElevenLabs TTS: {type(exc).__name__} http={status}") from exc
         if not audio:
             raise ProviderError("ElevenLabs TTS devolvió audio vacío")
         return audio

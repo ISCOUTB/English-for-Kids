@@ -45,9 +45,11 @@ class FakeTextGenerator:
 class FakeTTS:
     def __init__(self):
         self.calls: list[str] = []
+        self.languages: list[str] = []  # idioma (voz) pedido en cada llamada
 
-    def synthesize(self, text):
+    def synthesize(self, text, language="es"):
         self.calls.append(text)
+        self.languages.append(language)
         return b"ID3-audio-falso"
 
 
@@ -69,9 +71,11 @@ class FakeJudge:
         self.verdict = True
         self.error: Exception | None = None
         self.calls: list[tuple[str, list[str]]] = []
+        self.contexts: list[tuple[str, str]] = []  # (idioma, rango_edad) de cada llamada
 
-    def judge(self, target, heard):
+    def judge(self, target, heard, language="en", age_range="3-4"):
         self.calls.append((target, heard))
+        self.contexts.append((language, age_range))
         if self.error:
             raise self.error
         return self.verdict

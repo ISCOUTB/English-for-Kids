@@ -26,6 +26,7 @@ def get_text_to_speech() -> TextToSpeech:
     return ElevenLabsTTS(
         api_key=s.elevenlabs_api_key,
         voice_id=s.elevenlabs_voice_id,
+        voice_id_es=s.elevenlabs_voice_id_es,
         model_id=s.elevenlabs_tts_model,
     )
 

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app import models  # noqa: F401  (registra las tablas antes de crearlas)
 from app.core.config import get_settings
 from app.core.db import Base, get_db, get_engine
+from app.core.migrations import upgrade_schema
 from app.modules.auth.router import router as auth_router
 from app.modules.family.router import router as family_router
 from app.modules.speech.router import router as speech_router
@@ -27,6 +28,7 @@ async def lifespan(_: FastAPI):
     # Crea las tablas que falten. Para cambios futuros del esquema habrá que usar
     # migraciones (Alembic): create_all no modifica tablas que ya existen.
     Base.metadata.create_all(get_engine())
+    upgrade_schema(get_engine())
     yield
 
 

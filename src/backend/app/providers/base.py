@@ -30,8 +30,8 @@ class TextGenerator(Protocol):
 
 
 class TextToSpeech(Protocol):
-    def synthesize(self, text: str) -> bytes:
-        """Devuelve el audio (mp3) del texto."""
+    def synthesize(self, text: str, language: str = "es") -> bytes:
+        """Devuelve el audio (mp3) del texto. `language` ("es" o "en") elige la voz."""
         ...
 
 

@@ -493,7 +493,7 @@
           "speech"
         ],
         "summary": "Judge Pronunciation",
-        "description": "Segunda opinión con IA, para cuando las reglas locales de la app no aceptaron el intento.\n\nRecibe SOLO el texto que reconoció el teléfono (nunca audio). Primero repite la comprobación\nlocal, que es gratis e instantánea; la IA solo se consulta si esa comprobación falla.",
+        "description": "Segunda opinión con IA, para cuando las reglas locales de la app no aceptaron el intento.\n\nRecibe SOLO el texto que reconoció el teléfono (nunca audio). Sirve para inglés y español\n(`idioma`). Primero repite la comprobación local, que es gratis e instantánea; la IA solo\nse consulta si esa comprobación falla. Los niños de 3-4 años reciben más indulgencia.",
         "operationId": "judge_pronunciation_speech_judge_post",
         "requestBody": {
           "content": {
@@ -800,6 +800,16 @@
               "cat"
             ]
           },
+          "idioma": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es"
+            ],
+            "title": "Idioma",
+            "description": "Idioma de la palabra objetivo: 'en' (inglés) o 'es' (español)",
+            "default": "en"
+          },
           "escuchado": {
             "items": {
               "type": "string"
@@ -937,6 +947,15 @@
           "audio_listo": {
             "type": "boolean",
             "title": "Audio Listo"
+          },
+          "idioma": {
+            "type": "string",
+            "enum": [
+              "es",
+              "en"
+            ],
+            "title": "Idioma",
+            "default": "es"
           }
         },
         "type": "object",

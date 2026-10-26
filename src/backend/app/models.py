@@ -128,6 +128,8 @@ class Historia(Base):
     texto: Mapped[str] = mapped_column(Text)
     audio_ref: Mapped[str | None] = mapped_column(String(120), default=None)
     clave_cache: Mapped[str] = mapped_column(String(64), index=True)
+    # Idioma de la narración ("es" o "en"): decide qué voz lee el cuento.
+    idioma: Mapped[str] = mapped_column(String(2), default="es", server_default="es")
     creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     nino: Mapped[Nino] = relationship(back_populates="historias")

@@ -39,7 +39,8 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     gemini_model: str = "gemini-3.6-flash"
     elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "hpp4J3VqNfWAUOO0d1Us"
+    elevenlabs_voice_id: str = "hpp4J3VqNfWAUOO0d1Us"  # voz de los cuentos en INGLÉS
+    elevenlabs_voice_id_es: str = "LMOrpyqRBvYunxCf0zDX"  # voz de los cuentos en ESPAÑOL
     elevenlabs_tts_model: str = "eleven_multilingual_v2"
     elevenlabs_stt_model: str = "scribe_v2"
 

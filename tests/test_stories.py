@@ -2,7 +2,13 @@ import pytest
 
 from app.core.config import get_settings
 from app.main import app
-from app.modules.stories.service import MAX_STORY_WORDS, build_prompt, cache_key, clean_story
+from app.modules.stories.service import (
+    MAX_STORY_WORDS,
+    build_prompt,
+    cache_key,
+    clean_story,
+    story_length,
+)
 from app.providers.base import ProviderError, ProviderNotConfigured
 from conftest import make_child
 
@@ -116,7 +122,7 @@ def test_tts_not_configured_is_503(client, tutor_a, text_gen, tts):
     child = make_child(client, tutor_a)
     story = _create(client, tutor_a, child).json()["id"]
 
-    def broken(_text):
+    def broken(_text, _language="es"):
         raise ProviderNotConfigured("falta ELEVENLABS_API_KEY")
 
     tts.synthesize = broken
@@ -124,7 +130,7 @@ def test_tts_not_configured_is_503(client, tutor_a, text_gen, tts):
 
 
 def test_clean_story_trims_to_last_full_sentence():
-    long_text = " ".join(["Hola mundo."] * 200)
+    long_text = " ".join(["Hola mundo."] * 400)
     cleaned = clean_story(long_text)
     assert len(cleaned.split()) <= MAX_STORY_WORDS
     assert cleaned.endswith(".")
@@ -135,3 +141,80 @@ def test_prompt_and_cache_key_details():
     assert "Elige tú un tema" in build_prompt(["cat"], None, "es")
     assert cache_key(["cat", "dog"], None, "es") == cache_key(["DOG", "Cat"], None, "es")
     assert cache_key(["cat"], None, "es") != cache_key(["cat"], None, "en")
+
+
+def test_story_length_depends_on_age():
+    assert story_length("3-4") == (200, 260)
+    assert story_length("5-6") == (300, 400)
+    assert story_length(None) == story_length("3-4")
+    assert "entre 300 y 400 palabras" in build_prompt(["cat"], None, "es", "5-6")
+    assert "between 200 and 260 words" in build_prompt(["cat"], None, "en", "3-4")
+    assert "al menos dos veces" in build_prompt(["cat"], None, "es")
+    assert cache_key(["cat"], None, "es", "3-4") != cache_key(["cat"], None, "es", "5-6")
+
+
+def test_story_is_saved_with_language_and_uses_matching_voice(client, tutor_a, text_gen, tts):
+    child = make_child(client, tutor_a)
+    es = client.post(
+        "/stories",
+        json={"nino_id": child, "palabras": ["cat"], "idioma": "es"},
+        headers=tutor_a,
+    ).json()
+    en = client.post(
+        "/stories",
+        json={"nino_id": child, "palabras": ["cat"], "idioma": "en"},
+        headers=tutor_a,
+    ).json()
+    assert (es["idioma"], en["idioma"]) == ("es", "en")
+
+    assert client.get(f"/stories/{es['id']}/audio", headers=tutor_a).status_code == 200
+    assert client.get(f"/stories/{en['id']}/audio", headers=tutor_a).status_code == 200
+    assert tts.languages == ["es", "en"]
+
+
+def test_elevenlabs_picks_the_voice_by_language(monkeypatch):
+    from app.providers.elevenlabs import ElevenLabsTTS
+
+    used = []
+
+    class FakeTTSApi:
+        def convert(self, voice_id, model_id, text):
+            used.append(voice_id)
+            return iter([b"mp3"])
+
+    class FakeClient:
+        text_to_speech = FakeTTSApi()
+
+    tts = ElevenLabsTTS("key", voice_id="VOZ_EN", model_id="m", voice_id_es="VOZ_ES")
+    monkeypatch.setattr(tts, "_get_client", lambda: FakeClient())
+    tts.synthesize("hola", "es")
+    tts.synthesize("hello", "en")
+    assert used == ["VOZ_ES", "VOZ_EN"]
+
+
+def test_default_voices_are_the_configured_ones():
+    from app.core.config import Settings
+
+    s = Settings(secret_key="x" * 40, database_url="sqlite:///:memory:")
+    assert s.elevenlabs_voice_id == "hpp4J3VqNfWAUOO0d1Us"
+    assert s.elevenlabs_voice_id_es == "LMOrpyqRBvYunxCf0zDX"
+
+
+def test_upgrade_schema_adds_language_column_to_old_database(tmp_path):
+    from sqlalchemy import create_engine, inspect, text
+
+    from app.core.migrations import upgrade_schema
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE historia (id INTEGER PRIMARY KEY, texto TEXT)"))
+        conn.execute(text("INSERT INTO historia (texto) VALUES ('Leo is a cat and the sky is blue')"))
+        conn.execute(text("INSERT INTO historia (texto) VALUES ('Había un gato feliz con su cat')"))
+
+    upgrade_schema(engine)
+    upgrade_schema(engine)  # se puede repetir sin error
+
+    assert "idioma" in {c["name"] for c in inspect(engine).get_columns("historia")}
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT idioma FROM historia ORDER BY id")).scalars().all()
+    assert rows == ["en", "es"]

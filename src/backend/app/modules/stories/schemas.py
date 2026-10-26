@@ -49,3 +49,4 @@ class StoryOut(BaseModel):
     texto: str
     creada_en: datetime
     audio_listo: bool
+    idioma: Literal["es", "en"] = "es"
