@@ -121,7 +121,7 @@ class _TalkingCharacterState extends State<TalkingCharacter> {
                 debugPrint('⚠️ No se encontró $path');
                 return Center(
                   child: Text(
-                    widget.language == Lang.en ? '🧒' : '👧',
+                    widget.folder == 'nino' ? '🧒' : '👧',
                     style: const TextStyle(fontSize: 64),
                   ),
                 );

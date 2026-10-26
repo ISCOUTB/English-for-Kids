@@ -13,6 +13,7 @@ import '../children/children_service.dart';
 import '../consent/consent_controller.dart';
 import '../consent/consent_screen.dart';
 import '../consent/consent_service.dart';
+import '../stories/stories_service.dart';
 import '../study/progress_repository.dart';
 import '../study/speech_judge_service.dart';
 
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final ChildrenController _children;
   late final ConsentController _consent;
   late final SpeechJudgeService _speech;
+  late final StoriesService _stories;
   final ProgressRepository _progress = ProgressRepository();
 
   @override
@@ -49,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     _consent = ConsentController(ConsentService(widget.api));
     _speech = SpeechJudgeService(widget.api);
+    _stories = StoriesService(widget.api);
     _refresh();
   }
 
@@ -77,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           consent: _consent,
           speech: _speech,
           progress: _progress,
+          stories: _stories,
         ),
       ),
     );

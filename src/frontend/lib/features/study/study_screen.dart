@@ -1,15 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../vocabulary/audio_service.dart';
 import '../vocabulary/vocab_models.dart';
 import '../vocabulary/word_image.dart';
+import 'local_judge.dart';
 import 'pronunciation_controller.dart';
 import 'study_config.dart';
 import 'study_session.dart';
 import 'talking_character.dart';
 
-/// Estudio de una palabra: imagen arriba; abajo, personaje en inglés,
-/// micrófono y personaje en español.
+/// Estudio de una palabra: imagen arriba; abajo, un personaje por idioma y
+/// el micrófono en el centro. El idioma activo se resalta.
 class StudyScreen extends StatefulWidget {
   const StudyScreen({
     super.key,
@@ -38,6 +40,7 @@ class _StudyScreenState extends State<StudyScreen> {
     super.initState();
     _mic = PronunciationController(
       childId: widget.session.child.id,
+      band: ageBandFor(widget.session.child.rangoEdad),
       judge: widget.session.speech,
       progress: widget.session.progress,
       consent: widget.session.consent,
@@ -59,12 +62,8 @@ class _StudyScreenState extends State<StudyScreen> {
     _mic.setWord(_word);
   }
 
-  void _speak(Lang lang) {
-    _mic.setWord(_word); // si estaba escuchando, se cancela
-    _audio.speak(lang, _word);
-  }
-
   void _onMic() {
+    if (_mic.transitioning) return;
     if (!widget.session.consent.voiceAllowed) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -78,8 +77,8 @@ class _StudyScreenState extends State<StudyScreen> {
     _mic.toggle();
   }
 
-  String _feedback(MicState state, bool allowed) {
-    switch (state) {
+  String _feedback(bool allowed) {
+    switch (_mic.state) {
       case MicState.listening:
         return '¡Te escucho! 👂';
       case MicState.processing:
@@ -89,6 +88,7 @@ class _StudyScreenState extends State<StudyScreen> {
       case MicState.unavailable:
         return _mic.message ?? '';
       case MicState.ready:
+        if (_mic.transitioning) return '🔊';
         return allowed ? 'Toca el micrófono y repite 🎤' : 'Voz sin permiso';
     }
   }
@@ -107,11 +107,10 @@ class _StudyScreenState extends State<StudyScreen> {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge(
-            [_audio, _mic, widget.session.consent],
-          ),
+          listenable: Listenable.merge([_audio, _mic, widget.session.consent]),
           builder: (context, _) {
             final allowed = widget.session.consent.voiceAllowed;
+            final complete = _mic.wordComplete;
 
             return Stack(
               children: [
@@ -159,12 +158,15 @@ class _StudyScreenState extends State<StudyScreen> {
                               language: Lang.en,
                               caption: word.en,
                               speaking: _audio.speaking,
-                              onTap: () => _speak(Lang.en),
+                              isActive: _mic.activeLang == Lang.en,
+                              isDone: _mic.doneEn,
+                              onTap: () => _mic.selectLanguage(Lang.en),
                             ),
                           ),
                           _MicButton(
                             state: _mic.state,
-                            enabled: allowed,
+                            enabled: allowed && !_mic.transitioning,
+                            level: _mic.soundLevel,
                             onTap: _onMic,
                           ),
                           Expanded(
@@ -172,7 +174,9 @@ class _StudyScreenState extends State<StudyScreen> {
                               language: Lang.es,
                               caption: word.es,
                               speaking: _audio.speaking,
-                              onTap: () => _speak(Lang.es),
+                              isActive: _mic.activeLang == Lang.es,
+                              isDone: _mic.doneEs,
+                              onTap: () => _mic.selectLanguage(Lang.es),
                             ),
                           ),
                         ],
@@ -182,19 +186,39 @@ class _StudyScreenState extends State<StudyScreen> {
                         height: 30,
                         child: Center(
                           child: Text(
-                            _feedback(_mic.state, allowed),
+                            _feedback(allowed),
                             textAlign: TextAlign.center,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
+                      if (complete) ...[
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: FilledButton.icon(
+                            onPressed: () => _go(1),
+                            icon: const Icon(Icons.arrow_forward, size: 32),
+                            label: const Text('Siguiente'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(68),
+                              backgroundColor: Colors.green,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 if (_mic.state == MicState.success)
-                  const Positioned.fill(
-                    child: IgnorePointer(child: _Celebration()),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: _Celebration(
+                        emojis: complete ? '🏆🎉🌟' : '🎉⭐🎉',
+                      ),
+                    ),
                   ),
               ],
             );
@@ -228,36 +252,73 @@ class _CharacterColumn extends StatelessWidget {
     required this.language,
     required this.caption,
     required this.speaking,
+    required this.isActive,
+    required this.isDone,
     required this.onTap,
   });
 
   final Lang language;
   final String caption;
   final Lang? speaking;
+  final bool isActive;
+  final bool isDone;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TalkingCharacter(
-          folder: kCharacterFolder[language]!,
-          language: language,
-          speakingLanguage: speaking,
-          onTap: onTap,
+        // Brillo suave alrededor del personaje del idioma activo.
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isActive ? primary : Colors.transparent,
+              width: 3,
+            ),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : const [],
+          ),
+          child: TalkingCharacter(
+            folder: kCharacterFolder[language]!,
+            language: language,
+            speakingLanguage: speaking,
+            onTap: onTap,
+          ),
         ),
         const SizedBox(height: 4),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            caption,
-            maxLines: 1,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  caption,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            if (isDone) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.check_circle, color: Colors.green, size: 20),
+            ],
+          ],
         ),
       ],
     );
@@ -268,11 +329,15 @@ class _MicButton extends StatefulWidget {
   const _MicButton({
     required this.state,
     required this.enabled,
+    required this.level,
     required this.onTap,
   });
 
   final MicState state;
   final bool enabled;
+
+  /// Nivel de sonido 0..1: el anillo "oye" al niño.
+  final ValueListenable<double> level;
   final VoidCallback onTap;
 
   @override
@@ -333,7 +398,10 @@ class _MicButtonState extends State<_MicButton>
           icon = const SizedBox(
             width: 32,
             height: 32,
-            child: CircularProgressIndicator(strokeWidth: 4, color: Colors.white),
+            child: CircularProgressIndicator(
+              strokeWidth: 4,
+              color: Colors.white,
+            ),
           );
         case MicState.success:
           background = Colors.green;
@@ -354,23 +422,24 @@ class _MicButtonState extends State<_MicButton>
       button: true,
       label: 'Micrófono',
       child: SizedBox(
-        width: 128,
-        height: 128,
+        width: 140,
+        height: 140,
         child: Center(
           child: AnimatedBuilder(
-            animation: _pulse,
+            animation: Listenable.merge([_pulse, widget.level]),
             builder: (context, child) {
+              final ring = 96 + 18 * _pulse.value + 30 * widget.level.value;
               return Stack(
                 alignment: Alignment.center,
                 children: [
                   if (listening)
                     Container(
-                      width: 96 + 30 * _pulse.value,
-                      height: 96 + 30 * _pulse.value,
+                      width: ring,
+                      height: ring,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: background.withValues(
-                          alpha: 0.28 * (1 - _pulse.value),
+                          alpha: 0.18 + 0.22 * widget.level.value,
                         ),
                       ),
                     ),
@@ -400,7 +469,9 @@ class _MicButtonState extends State<_MicButton>
 }
 
 class _Celebration extends StatelessWidget {
-  const _Celebration();
+  const _Celebration({required this.emojis});
+
+  final String emojis;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +482,7 @@ class _Celebration extends StatelessWidget {
         curve: Curves.elasticOut,
         builder: (context, value, child) =>
             Transform.scale(scale: value, child: child),
-        child: const Text('🎉⭐🎉', style: TextStyle(fontSize: 84)),
+        child: Text(emojis, style: const TextStyle(fontSize: 84)),
       ),
     );
   }

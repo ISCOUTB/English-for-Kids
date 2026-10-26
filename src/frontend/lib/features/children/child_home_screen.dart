@@ -4,6 +4,8 @@ import '../../core/widgets.dart';
 import '../consent/consent_controller.dart';
 import '../study/progress_repository.dart';
 import '../study/speech_judge_service.dart';
+import '../stories/stories_list_screen.dart';
+import '../stories/stories_service.dart';
 import '../study/study_session.dart';
 import '../vocabulary/card_colors.dart';
 import '../vocabulary/vocab_models.dart';
@@ -21,12 +23,14 @@ class ChildHomeScreen extends StatefulWidget {
     required this.consent,
     required this.speech,
     required this.progress,
+    required this.stories,
   });
 
   final Child child;
   final ConsentController consent;
   final SpeechJudgeService speech;
   final ProgressRepository progress;
+  final StoriesService stories;
 
   @override
   State<ChildHomeScreen> createState() => _ChildHomeScreenState();
@@ -100,6 +104,11 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
                         ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
+                StoriesEntryCard(
+                  child: widget.child,
+                  service: widget.stories,
+                ),
+                const SizedBox(height: 14),
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,

@@ -20,6 +20,9 @@ class StudyAudio extends SafeChangeNotifier {
 
   Lang? _speaking;
 
+  /// Sube cada vez que algo nuevo cancela lo anterior.
+  int _epoch = 0;
+
   /// Idioma que suena ahora mismo (null si no suena nada).
   Lang? get speaking => _speaking;
 
@@ -32,6 +35,7 @@ class StudyAudio extends SafeChangeNotifier {
   /// Detiene lo que suene y reproduce la palabra en el idioma pedido.
   Future<void> speak(Lang lang, Word word) async {
     final path = lang == Lang.en ? word.audioEn : word.audioEs;
+    _epoch++;
     if (path == null) {
       debugPrint('⚠️ Sin audio ${lang.name} para "${word.id}"');
       return;
@@ -46,24 +50,46 @@ class StudyAudio extends SafeChangeNotifier {
     }
   }
 
+  /// Reproduce un audio de interfaz (nadie mueve la boca) y espera a que
+  /// termine. Devuelve false si otra cosa lo canceló mientras sonaba. Si el
+  /// archivo no existe, sigue sin él y devuelve true.
+  Future<bool> playUntilDone(String path) async {
+    final mine = ++_epoch;
+    try {
+      await _voice.stop();
+      _setSpeaking(null);
+      await _voice.play(AssetSource(path));
+      await _voice.onPlayerComplete.first.timeout(const Duration(seconds: 10));
+    } catch (e) {
+      debugPrint('⚠️ Audio omitido assets/$path: $e');
+    }
+    return mine == _epoch;
+  }
+
+  /// Reproduce varios sonidos de interfaz, uno tras otro.
+  Future<void> playFxSequence(List<String> paths) async {
+    for (final path in paths) {
+      try {
+        await _fx.stop();
+        await _fx.play(AssetSource(path));
+        await _fx.onPlayerComplete.first.timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('⚠️ Sonido omitido assets/$path: $e');
+      }
+    }
+  }
+
   Future<void> stop() async {
+    _epoch++;
     try {
       await _voice.stop();
     } catch (_) {}
     _setSpeaking(null);
   }
 
-  Future<void> playSuccess() async {
-    try {
-      await _fx.stop();
-      await _fx.play(AssetSource(kSuccessSound));
-    } catch (e) {
-      debugPrint('⚠️ No se pudo reproducir assets/$kSuccessSound: $e');
-    }
-  }
-
   @override
   void dispose() {
+    _epoch++;
     _doneSub?.cancel();
     _voice.dispose();
     _fx.dispose();
