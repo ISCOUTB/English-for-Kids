@@ -15,6 +15,7 @@ from app.core.db import Base, get_db, get_engine
 from app.core.migrations import upgrade_schema
 from app.modules.auth.router import router as auth_router
 from app.modules.family.router import router as family_router
+from app.modules.progress.router import router as progress_router
 from app.modules.speech.router import router as speech_router
 from app.modules.stories.router import router as stories_router
 from app.providers.base import ProviderError, ProviderNotConfigured
@@ -62,6 +63,7 @@ app.include_router(auth_router)
 app.include_router(family_router)
 app.include_router(stories_router)
 app.include_router(speech_router)
+app.include_router(progress_router)
 
 
 @app.get("/health", tags=["health"])

@@ -11,7 +11,7 @@ backend/
   app/
     core/        configuración, base de datos, sesión (JWT) y permisos
     providers/   interfaces y adaptadores de Google AI Studio y ElevenLabs
-    modules/     auth · family · stories · speech
+    modules/     auth · family · stories · speech · progress
     models.py    tablas (modelo entidad-relación)
     main.py
   Dockerfile
@@ -51,8 +51,11 @@ pytest
 | `POST/GET /consents` | Consentimiento de voz del tutor (aceptar o revocar) |
 | `POST /stories` · `GET /stories?nino_id=` · `GET /stories/{id}` | Crear y consultar historias |
 | `GET /stories/{id}/audio` | Narración en mp3 (se genera una vez y se guarda en caché) |
-| `POST /speech/judge` | Segunda opinión con IA: recibe el **texto** que reconoció el teléfono y responde `acierto` o `intentar_de_nuevo` (requiere consentimiento) |
+| `POST /speech/judge` | Segunda opinión con IA: recibe el **texto** que reconoció el teléfono, el `idioma` (`en` o `es`) de la palabra, y responde `acierto` o `intentar_de_nuevo` (requiere consentimiento) |
 | `POST /speech/check` | Respaldo: recibe el **audio**, lo transcribe con ElevenLabs y compara (requiere consentimiento) |
+| `POST /progress/attempts` | Guarda un lote de intentos (hasta 50): palabra, idioma, acierto y si fue con ayuda |
+| `GET /progress/{nino_id}/summary` | Resumen para el tutor: palabras dominadas, por reforzar, racha y última semana (`tz_offset_min` = zona horaria del tutor) |
+| `DELETE /progress/{nino_id}` | Borra el progreso del niño |
 | `GET /health` · `GET /health/db` | Estado del servicio y de la base de datos |
 
 Todas las rutas, salvo `/auth/register`, `/auth/login` y `/health*`, exigen la cabecera `Authorization: Bearer <token>`.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/parental_gate.dart';
 import '../../core/session_storage.dart';
 import '../../core/widgets.dart';
 import '../auth/auth_controller.dart';
@@ -13,6 +14,8 @@ import '../children/children_service.dart';
 import '../consent/consent_controller.dart';
 import '../consent/consent_screen.dart';
 import '../consent/consent_service.dart';
+import '../progress/progress_screen.dart';
+import '../progress/progress_service.dart';
 import '../stories/stories_service.dart';
 import '../study/progress_repository.dart';
 import '../study/speech_judge_service.dart';
@@ -40,7 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late final ConsentController _consent;
   late final SpeechJudgeService _speech;
   late final StoriesService _stories;
-  final ProgressRepository _progress = ProgressRepository();
+  late final ProgressService _progressService;
+  late final ProgressRepository _progress;
 
   @override
   void initState() {
@@ -51,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     _consent = ConsentController(ConsentService(widget.api));
     _speech = SpeechJudgeService(widget.api);
+    _progressService = ProgressService(widget.api);
+    _progress = ProgressRepository(service: _progressService);
     _stories = StoriesService(widget.api);
     _refresh();
   }
@@ -59,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _children.dispose();
     _consent.dispose();
+    _progress.dispose();
     super.dispose();
   }
 
@@ -81,6 +88,21 @@ class _HomeScreenState extends State<HomeScreen> {
           speech: _speech,
           progress: _progress,
           stories: _stories,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openProgress(Child child) async {
+    // Zona del tutor: pregunta de adultos para que un niño pequeño no entre solo.
+    if (!await askParentalGate(context)) return;
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProgressScreen(
+          child: child,
+          service: _progressService,
+          repository: _progress,
         ),
       ),
     );
@@ -222,6 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: child,
                           isActive: child.id == _children.activeId,
                           onTap: () => _openChild(child),
+                          onProgress: () => _openProgress(child),
                           onDelete: () => _deleteChild(child),
                         ),
                       _AddCard(onTap: _addChild),
@@ -242,12 +265,14 @@ class _ChildCard extends StatelessWidget {
     required this.child,
     required this.isActive,
     required this.onTap,
+    required this.onProgress,
     required this.onDelete,
   });
 
   final Child child;
   final bool isActive;
   final VoidCallback onTap;
+  final VoidCallback onProgress;
   final VoidCallback onDelete;
 
   @override
@@ -297,14 +322,25 @@ class _ChildCard extends StatelessWidget {
             ),
             Positioned(
               top: 0,
+              left: 0,
+              child: IconButton(
+                tooltip: 'Ver progreso (adultos)',
+                icon: const Icon(Icons.bar_chart_rounded, size: 24),
+                onPressed: onProgress,
+              ),
+            ),
+            Positioned(
+              top: 0,
               right: 0,
               child: PopupMenuButton<String>(
                 tooltip: 'Opciones',
                 icon: const Icon(Icons.more_vert, size: 22),
                 onSelected: (value) {
+                  if (value == 'progress') onProgress();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'progress', child: Text('Ver progreso')),
                   PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                 ],
               ),

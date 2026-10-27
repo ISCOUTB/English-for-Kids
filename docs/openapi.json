@@ -581,6 +581,155 @@
         ]
       }
     },
+    "/progress/attempts": {
+      "post": {
+        "tags": [
+          "progress"
+        ],
+        "summary": "Save Attempts",
+        "description": "Guarda intentos de práctica. La app los envía en lotes (hasta 50) y reintenta si falla.",
+        "operationId": "save_attempts_progress_attempts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/progress/{nino_id}/summary": {
+      "get": {
+        "tags": [
+          "progress"
+        ],
+        "summary": "Progress Summary",
+        "operationId": "progress_summary_progress__nino_id__summary_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nino_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Nino Id"
+            }
+          },
+          {
+            "name": "tz_offset_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 840,
+              "minimum": -840,
+              "description": "Diferencia de la zona horaria del tutor con UTC, en minutos (Colombia: -300)",
+              "default": 0,
+              "title": "Tz Offset Min"
+            },
+            "description": "Diferencia de la zona horaria del tutor con UTC, en minutos (Colombia: -300)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/progress/{nino_id}": {
+      "delete": {
+        "tags": [
+          "progress"
+        ],
+        "summary": "Reset Progress",
+        "description": "Borra todo el progreso del niño (derecho del tutor a eliminar los datos, RNF-04).",
+        "operationId": "reset_progress_progress__nino_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "nino_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Nino Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -622,6 +771,93 @@
   },
   "components": {
     "schemas": {
+      "AttemptIn": {
+        "properties": {
+          "palabra": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Palabra",
+            "examples": [
+              "apple"
+            ]
+          },
+          "idioma": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es"
+            ],
+            "title": "Idioma"
+          },
+          "acierto": {
+            "type": "boolean",
+            "title": "Acierto"
+          },
+          "asistido": {
+            "type": "boolean",
+            "title": "Asistido",
+            "description": "Acierto con ayuda tras varios fallos",
+            "default": false
+          },
+          "fecha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha",
+            "description": "Momento real del intento, si estuvo en cola sin conexión (opcional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "palabra",
+          "idioma",
+          "acierto"
+        ],
+        "title": "AttemptIn"
+      },
+      "AttemptsIn": {
+        "properties": {
+          "nino_id": {
+            "type": "integer",
+            "title": "Nino Id"
+          },
+          "intentos": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptIn"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Intentos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nino_id",
+          "intentos"
+        ],
+        "title": "AttemptsIn"
+      },
+      "AttemptsOut": {
+        "properties": {
+          "guardados": {
+            "type": "integer",
+            "title": "Guardados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "guardados"
+        ],
+        "title": "AttemptsOut"
+      },
       "Body_check_pronunciation_speech_check_post": {
         "properties": {
           "nino_id": {
@@ -772,6 +1008,30 @@
         ],
         "title": "ConsentOut"
       },
+      "DayStats": {
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "intentos": {
+            "type": "integer",
+            "title": "Intentos"
+          },
+          "aciertos": {
+            "type": "integer",
+            "title": "Aciertos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fecha",
+          "intentos",
+          "aciertos"
+        ],
+        "title": "DayStats"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -845,6 +1105,91 @@
           "resultado"
         ],
         "title": "JudgeOut"
+      },
+      "LangStats": {
+        "properties": {
+          "intentos": {
+            "type": "integer",
+            "title": "Intentos",
+            "default": 0
+          },
+          "aciertos": {
+            "type": "integer",
+            "title": "Aciertos",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "LangStats"
+      },
+      "ProgressSummary": {
+        "properties": {
+          "nino_id": {
+            "type": "integer",
+            "title": "Nino Id"
+          },
+          "total_intentos": {
+            "type": "integer",
+            "title": "Total Intentos"
+          },
+          "total_aciertos": {
+            "type": "integer",
+            "title": "Total Aciertos"
+          },
+          "aciertos_asistidos": {
+            "type": "integer",
+            "title": "Aciertos Asistidos"
+          },
+          "palabras_practicadas": {
+            "type": "integer",
+            "title": "Palabras Practicadas"
+          },
+          "palabras_dominadas": {
+            "type": "integer",
+            "title": "Palabras Dominadas"
+          },
+          "palabras_por_reforzar": {
+            "type": "integer",
+            "title": "Palabras Por Reforzar"
+          },
+          "dias_activos_semana": {
+            "type": "integer",
+            "title": "Dias Activos Semana"
+          },
+          "racha_dias": {
+            "type": "integer",
+            "title": "Racha Dias"
+          },
+          "ultimos_dias": {
+            "items": {
+              "$ref": "#/components/schemas/DayStats"
+            },
+            "type": "array",
+            "title": "Ultimos Dias"
+          },
+          "palabras": {
+            "items": {
+              "$ref": "#/components/schemas/WordProgress"
+            },
+            "type": "array",
+            "title": "Palabras"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nino_id",
+          "total_intentos",
+          "total_aciertos",
+          "aciertos_asistidos",
+          "palabras_practicadas",
+          "palabras_dominadas",
+          "palabras_por_reforzar",
+          "dias_activos_semana",
+          "racha_dias",
+          "ultimos_dias",
+          "palabras"
+        ],
+        "title": "ProgressSummary"
       },
       "SpeechCheckOut": {
         "properties": {
@@ -1081,6 +1426,58 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WordProgress": {
+        "properties": {
+          "palabra": {
+            "type": "string",
+            "title": "Palabra"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "dominada",
+              "practicando",
+              "reforzar"
+            ],
+            "title": "Estado"
+          },
+          "intentos": {
+            "type": "integer",
+            "title": "Intentos"
+          },
+          "aciertos": {
+            "type": "integer",
+            "title": "Aciertos"
+          },
+          "asistidos": {
+            "type": "integer",
+            "title": "Asistidos"
+          },
+          "en": {
+            "$ref": "#/components/schemas/LangStats"
+          },
+          "es": {
+            "$ref": "#/components/schemas/LangStats"
+          },
+          "ultima_practica": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ultima Practica"
+          }
+        },
+        "type": "object",
+        "required": [
+          "palabra",
+          "estado",
+          "intentos",
+          "aciertos",
+          "asistidos",
+          "en",
+          "es",
+          "ultima_practica"
+        ],
+        "title": "WordProgress"
       }
     },
     "securitySchemes": {

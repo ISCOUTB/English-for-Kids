@@ -15,7 +15,8 @@
 | ADR-006 | Canales de TV infantil (iptv-org) aplazados | Aceptada |
 | ADR-007 | Base de datos: PostgreSQL de la plataforma | Aceptada |
 | ADR-008 | Inicio de sesión del tutor con nombre y correo | Aceptada (con riesgo conocido) |
-| ADR-009 | Reconocimiento de voz en el dispositivo y IA como segunda opinión | Aceptada (backend listo; app pendiente) |
+| ADR-009 | Reconocimiento de voz en el dispositivo y IA como segunda opinión | Aceptada |
+| ADR-010 | Progreso calculado al consultar, con intentos guardados por palabra | Aceptada |
 
 ---
 
@@ -201,4 +202,34 @@
 - (−) Las condiciones de la capa gratuita de Google pueden permitir usar los textos enviados para mejorar sus productos: hay que verificarlo antes de usarla con familias reales.
 - (−) El límite de uso vive en la memoria del contenedor y se reinicia con él.
 - (−) Un juez indulgente puede aceptar de más. Es intencional para esta edad, y se ajusta con pruebas reales.
+- **Actualización (bilingüe e indulgencia por edad):** `POST /speech/judge` recibe `idioma` (`"en"` o `"es"`, por defecto `"en"`) para juzgar también la palabra en español, y usa el `rango_edad` del niño: a los 3-4 años la comprobación local acepta palabras de 4+ letras con similitud ≥ 0,7 y el prompt de la IA es "muy indulgente" (acepta sonido inicial, sílaba inicial o parte de la palabra); a los 5-6 mantiene umbrales más exigentes. La app lleva el flujo "ahora en español / ahora en inglés": cuando el niño acierta en un idioma, reproduce el audio de transición y pasa al otro. Un ruido sin palabras reconocibles no se puede juzgar con solo texto: la app ofrece ayuda (repetir la palabra) y, tras varios intentos fallidos, un acierto **asistido** que se registra aparte para no falsear el progreso.
 - ⚠️ **Por validar:** qué tan bien reconoce el sistema las voces de niños pequeños, y comparar latencia y acierto entre la regla local, `/speech/judge` y `/speech/check` con la pantalla de depuración de la app.
+
+---
+
+## ADR-010 — Progreso calculado al consultar, con intentos guardados por palabra
+
+**Estado:** Aceptada (backend y panel del tutor implementados)
+
+**Contexto.** El tutor necesita ver el avance de cada niño (RF-04, RF-05). El modelo original tenía una tabla `intento` ligada a `palabra` por clave foránea y una tabla `dominio` con un nivel precalculado. Pero el vocabulario vive en la app (ADR-002) y las tablas `categoria` y `palabra` nunca se cargaron, así que no había a qué enlazar.
+
+**Decisión.**
+1. Cada intento de voz se guarda en la tabla `intento_palabra` con la **palabra por su nombre en inglés** (el identificador que ya usa la app), el idioma practicado, si fue acierto y si fue un acierto **asistido** (tras varios fallos). Nunca se guarda audio ni lo que dijo el niño.
+2. El resumen se **calcula al consultarlo** (`GET /progress/{nino_id}/summary`) a partir de esos intentos; no hay tabla de dominio que mantener sincronizada. Con el volumen de una familia es instantáneo.
+3. **Regla de dominio:** una palabra está *dominada* con 3 aciertos en inglés **sin ayuda**; está *por reforzar* con al menos 3 intentos y menos del 40 % de aciertos sin ayuda; el resto está *practicando*. Los aciertos asistidos se muestran aparte y no cuentan como dominio.
+4. La app envía los intentos en lotes (hasta 50) y los reintenta si no hay conexión; el servidor acepta la hora real del intento solo si es razonable (no en el futuro ni de hace más de 30 días).
+5. Los días y la racha se calculan en la **zona horaria del tutor** (la app envía su diferencia con UTC).
+6. El tutor puede borrar el progreso de un niño (`DELETE /progress/{nino_id}`); borrar al niño lo borra también.
+7. El panel del tutor está detrás de una pregunta de aritmética sencilla, para que un niño pequeño no entre solo. No es seguridad: es una barrera de uso.
+
+**Alternativas consideradas.**
+- *Cargar el vocabulario en `categoria` y `palabra` y usar claves foráneas:* duplica un contenido que ya está en la app y obliga a mantenerlos sincronizados.
+- *Tabla `dominio` precalculada:* más rápida, pero hay que actualizarla en cada intento y se desincroniza con facilidad.
+
+**Consecuencias.**
+- (+) Cambiar la regla de dominio no exige migrar datos: basta cambiar el cálculo.
+- (+) Sin dependencias del vocabulario en el servidor.
+- (−) Si una palabra cambia de nombre en la app, su historial queda separado.
+- (−) Las tablas `intento` y `dominio` del diseño original quedan sin usar en bases de datos que ya existían.
+- (−) La cola de intentos de la app vive en memoria: si la app se cierra sin conexión, esos intentos se pierden.
+- ⚠️ **Por validar:** si la regla de 3 aciertos sin ayuda es adecuada para niños de 3 a 6 años.

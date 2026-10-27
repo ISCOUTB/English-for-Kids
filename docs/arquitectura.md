@@ -66,7 +66,7 @@ Organizada **por funcionalidad** y no por tipo de archivo. Así cada parte se pu
 |---|---|---|
 | `stories` | Armar el prompt con las palabras, pedir el texto, filtrar/moderar, generar el audio y guardar en caché | RF-06, RF-07, RNF-05, RNF-06 |
 | `speech` | `POST /speech/judge`: segunda opinión con IA a partir del texto reconocido; `POST /speech/check`: respaldo que recibe audio y lo transcribe con ElevenLabs | RF-02, RF-03 |
-| `progress` | Guardar aciertos y errores por palabra y calcular el dominio estimado *(pendiente de implementar)* | RF-04, RF-05 |
+| `progress` | Guardar los intentos por palabra y calcular el resumen (dominio, racha, días activos) al consultarlo (ADR-010) | RF-04, RF-05 |
 | `auth` | Registro e inicio de sesión del tutor con nombre y correo; entrega el token de sesión (ADR-008) | RF-09, RNF-02 |
 | `family` | Perfiles de niños, consentimiento del tutor y borrado de datos; regla "cada niño pertenece a un tutor" | RNF-02, RNF-04 |
 | `providers` | Interfaces y adaptadores para Google AI Studio y ElevenLabs | RNF-03, RNF-05 |
@@ -83,13 +83,13 @@ Organizada **por funcionalidad** y no por tipo de archivo. Así cada parte se pu
 
 ### 4.2 Repetir una palabra (RF-02, RF-03, RF-04)
 1. El niño toca el micrófono (solo si el tutor dio el consentimiento).
-2. El **teléfono** reconoce lo que dijo y entrega varias alternativas de texto. El audio no llega a nuestro backend.
+2. El **teléfono** reconoce lo que dijo, en el idioma activo (inglés o español), y entrega varias alternativas de texto. El audio no llega a nuestro backend.
 3. La app aplica el **juez local**: normaliza el texto y lo compara con la palabra, su clave fonética y sus alias. Si acepta, termina aquí (instantáneo, sin conexión).
-4. Si no acepta y hay conexión, la app envía solo el **texto** a `POST /speech/judge`. El backend repite la comprobación local y, si también falla, pregunta a Gemini (booleano, temperatura 0, entrada sanitizada).
+4. Si no acepta y hay conexión, la app envía solo el **texto** y el `idioma` a `POST /speech/judge`; el backend usa la edad del niño para ser más o menos indulgente. El backend repite la comprobación local y, si también falla, pregunta a Gemini (booleano, temperatura 0, entrada sanitizada).
 5. Si la segunda opinión falla o tarda más de unos 3 segundos, la app trata el intento como "intentar otra vez".
 6. La app muestra una animación o frase positiva **local** (nunca porcentajes ni mensajes generados por la IA) y se registra el intento para el módulo `progress`.
 
-Decisión y alternativas: ADR-009.
+Al acertar en un idioma, la app reproduce el audio de transición ("ahora en español" o "ahora en inglés") y activa el otro idioma; al acertar en ambos, celebra la palabra completa. Decisión y alternativas: ADR-009.
 
 ### 4.3 Crear una historia (RF-06, RF-07)
 1. El niño o el tutor elige palabras estudiadas o escribe otras.
@@ -170,7 +170,7 @@ tests/
 ## 9. Pendientes
 
 - Dibujar el `modelo-er.png`: el modelo ya está implementado en `backend/app/models.py`.
-- Implementar el módulo `progress` (registrar intentos y calcular el dominio, RF-04) y cargar el vocabulario base en las tablas `categoria` y `palabra`.
+- Usar el dominio de cada palabra para ajustar qué palabras se sugieren al niño (motor adaptativo, RF-04): hoy el panel solo informa al tutor.
 - Reemplazar el nombre por un código enviado al correo al iniciar sesión (ADR-008).
 - Probar la conexión real con la base de datos del panel y el `Dockerfile`; confirmar los requisitos de la plataforma de despliegue (ADR-005).
 - Probar las llamadas reales a Google AI Studio y ElevenLabs cuando estén las llaves.

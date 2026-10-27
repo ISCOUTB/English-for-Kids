@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Float,
     ForeignKey,
     Integer,
     String,
@@ -49,7 +48,6 @@ class Nino(Base):
 
     tutor: Mapped[Tutor] = relationship(back_populates="ninos")
     intentos: Mapped[list["Intento"]] = relationship(back_populates="nino", cascade="all, delete-orphan")
-    dominios: Mapped[list["Dominio"]] = relationship(back_populates="nino", cascade="all, delete-orphan")
     historias: Mapped[list["Historia"]] = relationship(back_populates="nino", cascade="all, delete-orphan")
 
 
@@ -93,30 +91,25 @@ class Palabra(Base):
 
 
 class Intento(Base):
-    __tablename__ = "intento"
+    """Un intento de pronunciar una palabra con el micrófono (ADR-010).
+
+    Se guarda la palabra por su nombre en inglés (el identificador que usa la app) y no un
+    `palabra_id`, porque el vocabulario vive en la app y no se carga en la base de datos.
+    Nunca se guarda audio ni lo que dijo el niño: solo el resultado.
+    """
+
+    __tablename__ = "intento_palabra"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nino_id: Mapped[int] = mapped_column(ForeignKey("nino.id", ondelete="CASCADE"), index=True)
-    palabra_id: Mapped[int] = mapped_column(ForeignKey("palabra.id"), index=True)
+    palabra: Mapped[str] = mapped_column(String(60), index=True)
+    idioma: Mapped[str] = mapped_column(String(2))  # idioma de la palabra practicada: "en" o "es"
     acierto: Mapped[bool] = mapped_column(Boolean)
-    fecha: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # True si el acierto fue "con ayuda" (varios fallos seguidos): no cuenta como dominio.
+    asistido: Mapped[bool] = mapped_column(Boolean, default=False)
+    fecha: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
     nino: Mapped[Nino] = relationship(back_populates="intentos")
-
-
-class Dominio(Base):
-    """Resumen por niño y palabra que usará el motor adaptativo (RF-04)."""
-
-    __tablename__ = "dominio"
-
-    nino_id: Mapped[int] = mapped_column(ForeignKey("nino.id", ondelete="CASCADE"), primary_key=True)
-    palabra_id: Mapped[int] = mapped_column(ForeignKey("palabra.id"), primary_key=True)
-    aciertos: Mapped[int] = mapped_column(Integer, default=0)
-    errores: Mapped[int] = mapped_column(Integer, default=0)
-    nivel_dominio: Mapped[float] = mapped_column(Float, default=0.0)
-    ultima_practica: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
-
-    nino: Mapped[Nino] = relationship(back_populates="dominios")
 
 
 class Historia(Base):
