@@ -5,6 +5,7 @@ Para cambiar de proveedor se escribe un adaptador nuevo que las cumpla y se
 cambia una línea en providers/__init__.py; nada más se toca (RNF-03).
 """
 
+from dataclasses import dataclass
 from typing import Protocol
 
 
@@ -17,6 +18,26 @@ class ProviderError(Exception):
         super().__init__(detail or self.public_message)
         if public_message:
             self.public_message = public_message
+
+
+class InvalidIdentityToken(Exception):
+    """El token de inicio de sesión no es válido, está vencido o es de otra app."""
+
+
+@dataclass(frozen=True)
+class GoogleIdentity:
+    email: str
+    email_verified: bool
+    name: str | None = None
+
+
+class GoogleIdentityVerifier(Protocol):
+    def verify(self, id_token: str) -> GoogleIdentity:
+        """Comprueba con Google el token de identidad y devuelve quién es.
+
+        Lanza `InvalidIdentityToken` si no es válido y `ProviderError` si Google no responde.
+        """
+        ...
 
 
 class ProviderNotConfigured(ProviderError):

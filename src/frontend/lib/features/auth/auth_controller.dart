@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/api_client.dart';
 import '../../core/session_storage.dart';
 import 'auth_service.dart';
+import 'google_account_picker.dart';
 import 'tutor.dart';
 
 enum AuthStatus { loading, signedOut, signedIn }
@@ -14,15 +15,18 @@ class AuthController extends ChangeNotifier {
     required ApiClient api,
     required AuthService service,
     required SessionStorage storage,
+    GoogleAccountPicker? googlePicker,
   })  : _api = api,
         _service = service,
-        _storage = storage {
+        _storage = storage,
+        _google = googlePicker ?? DeviceGoogleAccountPicker() {
     _api.onUnauthorized = logout;
   }
 
   final ApiClient _api;
   final AuthService _service;
   final SessionStorage _storage;
+  final GoogleAccountPicker _google;
 
   AuthStatus _status = AuthStatus.loading;
   Tutor? _tutor;
@@ -112,6 +116,46 @@ class AuthController extends ChangeNotifier {
     return false;
   }
 
+  /// "Continuar con Google": elige la cuenta, el servidor la verifica y se abre
+  /// la sesión. Devuelve true si funcionó (false si cerró el selector o falló).
+  Future<bool> signInWithGoogle() async {
+    _busy = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final idToken = await _google.pickIdToken();
+      if (idToken == null) {
+        _busy = false; // cerró el selector: no es un error
+        notifyListeners();
+        return false;
+      }
+
+      final token = await _service.loginWithGoogle(idToken);
+      _api.token = token;
+      final tutor = await _service.me();
+
+      await _storage.save(token, tutor);
+      _tutor = tutor;
+      _status = AuthStatus.signedIn;
+      _busy = false;
+      notifyListeners();
+      return true;
+    } on GoogleSignInFailure catch (e) {
+      _api.token = null;
+      _error = e.message;
+    } on ApiException catch (e) {
+      _api.token = null;
+      _error = e.message;
+    } catch (_) {
+      _api.token = null;
+      _error = 'Algo salió mal. Intenta de nuevo.';
+    }
+    _busy = false;
+    notifyListeners();
+    return false;
+  }
+
   Future<void> logout() async {
     if (_status == AuthStatus.signedOut && _tutor == null) return;
     _api.token = null;
@@ -119,6 +163,7 @@ class AuthController extends ChangeNotifier {
     _status = AuthStatus.signedOut;
     await _storage.clear();
     notifyListeners();
+    await _google.signOut(); // la próxima vez vuelve a salir el selector de cuentas
   }
 
   void clearError() {

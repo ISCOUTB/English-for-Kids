@@ -7,4 +7,6 @@ pydantic-settings==2.16.1
 PyJWT==2.15.1
 python-multipart==0.0.32
 google-genai==2.33.0
+google-auth==2.62.0
+requests==2.34.2
 elevenlabs==2.74.1

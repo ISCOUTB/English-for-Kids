@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     # NO necesita CORS; solo hace falta si se prueba una versión web.
     cors_origins: str = ""
 
+    # --- Inicio de sesión (ADR-008) ----------------------------------------
+    # ID de cliente "Aplicación web" de Google Cloud. NO es secreto: es el mismo que lleva la app
+    # como serverClientId y sirve para comprobar que el token de Google se emitió para esta app.
+    google_client_id: str = "566955966049-3jg8jd0omf7b90jk67mde5li4814hh2u.apps.googleusercontent.com"
+    # El acceso con solo nombre y correo (sin verificar) permite entrar como otra persona:
+    # queda apagado y solo se enciende para pruebas (ENABLE_BASIC_LOGIN=true).
+    enable_basic_login: bool = False
+
     # --- Proveedores externos (las llaves las pones tú en el entorno) ----
     google_api_key: str = ""
     gemini_model: str = "gemini-3.6-flash"

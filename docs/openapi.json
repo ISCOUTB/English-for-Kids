@@ -88,6 +88,48 @@
         }
       }
     },
+    "/auth/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login With Google",
+        "description": "Entra (o crea la cuenta) con una cuenta de Google. El correo viene verificado por Google.",
+        "operationId": "login_with_google_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleLoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/me": {
       "get": {
         "tags": [
@@ -1031,6 +1073,22 @@
           "aciertos"
         ],
         "title": "DayStats"
+      },
+      "GoogleLoginIn": {
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 20,
+            "title": "Id Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_token"
+        ],
+        "title": "GoogleLoginIn",
+        "description": "Token de identidad que entrega Google a la app después de elegir la cuenta."
       },
       "HTTPValidationError": {
         "properties": {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,6 +38,11 @@ class _LoginScreenState extends State<LoginScreen> {
       nombre: _nombre.text.trim(),
       correo: _correo.text.trim(),
     );
+  }
+
+  Future<void> _google() async {
+    FocusScope.of(context).unfocus();
+    await widget.auth.signInWithGoogle();
   }
 
   @override
@@ -82,68 +88,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium,
                         ),
-                        const SizedBox(height: 28),
-                        SegmentedButton<AuthMode>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(
-                              value: AuthMode.login,
-                              label: Text('Entrar'),
-                            ),
-                            ButtonSegment(
-                              value: AuthMode.register,
-                              label: Text('Crear cuenta'),
-                            ),
-                          ],
-                          selected: {_mode},
-                          onSelectionChanged: busy
-                              ? null
-                              : (s) {
-                                  setState(() => _mode = s.first);
-                                  widget.auth.clearError();
-                                },
+                        const SizedBox(height: 32),
+                        _GoogleButton(busy: busy, onPressed: _google),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Elige la cuenta de Google con la que quieres entrar. '
+                          'Si es tu primera vez, se crea tu cuenta automáticamente.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall,
                         ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _nombre,
-                          enabled: !busy,
-                          textInputAction: TextInputAction.next,
-                          textCapitalization: TextCapitalization.words,
-                          autofillHints: const [AutofillHints.name],
-                          decoration: const InputDecoration(
-                            labelText: 'Nombre',
-                            prefixIcon: Icon(Icons.person_outline),
+                        if (AppConfig.basicLoginEnabled) ...[
+                          const SizedBox(height: 28),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'solo pruebas',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ),
+                              const Expanded(child: Divider()),
+                            ],
                           ),
-                          validator: (v) {
-                            if (v == null || v.trim().length < 2) {
-                              return 'Escribe tu nombre';
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (_) => _correoFocus.requestFocus(),
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _correo,
-                          focusNode: _correoFocus,
-                          enabled: !busy,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.done,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          autofillHints: const [AutofillHints.email],
-                          decoration: const InputDecoration(
-                            labelText: 'Correo',
-                            prefixIcon: Icon(Icons.mail_outline),
-                          ),
-                          validator: (v) {
-                            if (v == null || !_emailRegex.hasMatch(v.trim())) {
-                              return 'Escribe un correo válido';
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
+                          const SizedBox(height: 16),
+                          ..._basicForm(busy, isLogin),
+                        ],
                         if (error != null) ...[
                           const SizedBox(height: 16),
                           Container(
@@ -172,20 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: busy ? null : _submit,
-                          child: busy
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(isLogin ? 'Entrar' : 'Crear cuenta'),
-                        ),
                       ],
                     ),
                   ),
@@ -195,6 +153,119 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Acceso con nombre y correo (sin verificar). Solo se muestra en compilaciones
+  /// de prueba (BASIC_LOGIN=true).
+  List<Widget> _basicForm(bool busy, bool isLogin) {
+    return [
+      SegmentedButton<AuthMode>(
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(value: AuthMode.login, label: Text('Entrar')),
+          ButtonSegment(value: AuthMode.register, label: Text('Crear cuenta')),
+        ],
+        selected: {_mode},
+        onSelectionChanged: busy
+            ? null
+            : (s) {
+                setState(() => _mode = s.first);
+                widget.auth.clearError();
+              },
+      ),
+      const SizedBox(height: 20),
+      TextFormField(
+        controller: _nombre,
+        enabled: !busy,
+        textInputAction: TextInputAction.next,
+        textCapitalization: TextCapitalization.words,
+        autofillHints: const [AutofillHints.name],
+        decoration: const InputDecoration(
+          labelText: 'Nombre',
+          prefixIcon: Icon(Icons.person_outline),
+        ),
+        validator: (v) {
+          if (v == null || v.trim().length < 2) return 'Escribe tu nombre';
+          return null;
+        },
+        onFieldSubmitted: (_) => _correoFocus.requestFocus(),
+      ),
+      const SizedBox(height: 14),
+      TextFormField(
+        controller: _correo,
+        focusNode: _correoFocus,
+        enabled: !busy,
+        keyboardType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.done,
+        autocorrect: false,
+        enableSuggestions: false,
+        autofillHints: const [AutofillHints.email],
+        decoration: const InputDecoration(
+          labelText: 'Correo',
+          prefixIcon: Icon(Icons.mail_outline),
+        ),
+        validator: (v) {
+          if (v == null || !_emailRegex.hasMatch(v.trim())) {
+            return 'Escribe un correo válido';
+          }
+          return null;
+        },
+        onFieldSubmitted: (_) => _submit(),
+      ),
+      const SizedBox(height: 20),
+      OutlinedButton(
+        onPressed: busy ? null : _submit,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(isLogin ? 'Entrar con nombre y correo' : 'Crear cuenta'),
+      ),
+    ];
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.busy, required this.onPressed});
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: busy ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF3C4043),
+        disabledBackgroundColor: Colors.white70,
+        side: const BorderSide(color: Color(0xFFDADCE0)),
+        minimumSize: const Size.fromHeight(58),
+      ),
+      child: busy
+          ? const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            )
+          : const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'G',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF4285F4),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Continuar con Google'),
+              ],
+            ),
     );
   }
 }

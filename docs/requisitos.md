@@ -62,7 +62,7 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | RF-06 | Generación de historias | El usuario selecciona palabras estudiadas o escribe otras y el sistema genera una historia corta apta para niños | Should (propuesta) | La historia usa las palabras elegidas, con lenguaje simple y sin contenido inapropiado |
 | RF-07 | Narración de historias | El sistema convierte el texto de la historia en audio y lo reproduce | Should (propuesta) | La historia se puede escuchar completa desde la app |
 | RF-08 | Canales de TV infantil | Sección para ver canales infantiles | Won't (mejora futura) | Fuera del alcance de la v1 (ADR-006) |
-| RF-09 | Inicio de sesión del tutor | El tutor se registra e inicia sesión con su nombre y su correo, y desde ahí administra los perfiles de sus niños | Must (propuesta) | Con nombre y correo correctos se obtiene una sesión; con datos incorrectos no, y un tutor nunca ve datos de otro (ADR-008) |
+| RF-09 | Inicio de sesión del tutor | El tutor inicia sesión eligiendo su cuenta de Google, y desde ahí administra los perfiles de sus niños | Must (propuesta) | Con una cuenta de Google verificada se obtiene una sesión; con un token inválido no, y un tutor nunca ve datos de otro (ADR-008) |
 
 ---
 
@@ -118,7 +118,7 @@ Prioridad según **MoSCoW**: Must (obligatorio) · Should (importante) · Could 
 | Alcance | Incluía canales de TV | Riesgos de contenido y licencias, y poco aporte al objetivo | Aplazado como mejora futura (ADR-006) |
 | Despliegue | Plataforma externa | La universidad ofrece panel.iscoutb.dev | Backend en Docker en esa plataforma (ADR-005) |
 | Base de datos | Supabase | La plataforma de la universidad ya incluye PostgreSQL | PostgreSQL de la plataforma (ADR-007) |
-| Identificación | Solo se consideraba al niño | El adulto es quien administra la cuenta | El tutor inicia sesión con nombre y correo (RF-09, ADR-008) |
+| Identificación | Solo se consideraba al niño | El adulto es quien administra la cuenta | El tutor inicia sesión con su cuenta de Google (RF-09, ADR-008) |
 
 ---
 

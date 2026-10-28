@@ -9,9 +9,16 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.core.ratelimit import RateLimiter
-from app.providers.base import PronunciationJudge, SpeechToText, TextGenerator, TextToSpeech
+from app.providers.base import (
+    GoogleIdentityVerifier,
+    PronunciationJudge,
+    SpeechToText,
+    TextGenerator,
+    TextToSpeech,
+)
 from app.providers.elevenlabs import ElevenLabsSTT, ElevenLabsTTS
 from app.providers.gemini import GeminiPronunciationJudge, GeminiTextGenerator
+from app.providers.google_identity import GoogleIdTokenVerifier
 
 
 @lru_cache
@@ -41,6 +48,11 @@ def get_speech_to_text() -> SpeechToText:
 def get_pronunciation_judge() -> PronunciationJudge:
     s = get_settings()
     return GeminiPronunciationJudge(api_key=s.google_api_key, model=s.gemini_model)
+
+
+@lru_cache
+def get_google_verifier() -> GoogleIdentityVerifier:
+    return GoogleIdTokenVerifier(get_settings().google_client_id)
 
 
 @lru_cache

@@ -16,6 +16,12 @@ class TutorCredentials(BaseModel):
         return value
 
 
+class GoogleLoginIn(BaseModel):
+    """Token de identidad que entrega Google a la app después de elegir la cuenta."""
+
+    id_token: str = Field(min_length=20, max_length=4096)
+
+
 class TutorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -32,6 +32,34 @@ class AuthService {
     }
   }
 
+  /// Entra con el token de identidad de Google (POST /auth/google).
+  Future<String> loginWithGoogle(String idToken) async {
+    try {
+      final data = await _api.post('/auth/google', body: {'id_token': idToken});
+      return _tokenOrThrow(data);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        throw ApiException(
+          'No pudimos verificar tu cuenta de Google. Intenta de nuevo.',
+          statusCode: 401,
+        );
+      }
+      if (e.statusCode == 403) {
+        throw ApiException(
+          'Tu correo de Google no está verificado.',
+          statusCode: 403,
+        );
+      }
+      if (e.statusCode == 503) {
+        throw ApiException(
+          'El inicio de sesión con Google aún no está listo en el servidor.',
+          statusCode: 503,
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<String> register(String nombre, String correo) async {
     try {
       final data = await _api.post(

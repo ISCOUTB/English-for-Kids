@@ -14,7 +14,7 @@
 | ADR-005 | Despliegue en panel.iscoutb.dev con Docker | Aceptada (desplegado, con limitaciones) |
 | ADR-006 | Canales de TV infantil (iptv-org) aplazados | Aceptada |
 | ADR-007 | Base de datos: PostgreSQL de la plataforma | Aceptada |
-| ADR-008 | Inicio de sesión del tutor con nombre y correo | Aceptada (con riesgo conocido) |
+| ADR-008 | Inicio de sesión del tutor con cuenta de Google (y nombre y correo solo para pruebas) | Aceptada |
 | ADR-009 | Reconocimiento de voz en el dispositivo y IA como segunda opinión | Aceptada |
 | ADR-010 | Progreso calculado al consultar, con intentos guardados por palabra | Aceptada |
 
@@ -156,23 +156,35 @@
 
 ---
 
-## ADR-008 — Inicio de sesión del tutor con nombre y correo
+## ADR-008 — Inicio de sesión del tutor con cuenta de Google (y nombre y correo solo para pruebas)
 
-**Estado:** Aceptada (con riesgo conocido)
+**Estado:** Aceptada. *Actualización:* el diseño inicial era solo nombre y correo, sin verificar; ahora el camino principal es la cuenta de Google.
 
-**Contexto.** Se quiere que el tutor inicie sesión de la forma más simple posible, con su nombre y su correo.
+**Contexto.** Se quiere que el tutor inicie sesión de forma simple, pero sin que cualquiera pueda entrar con el correo de otra persona.
 
-**Decisión.** El tutor se registra y entra con nombre y correo, sin contraseña. El backend entrega un token firmado (JWT) que dura 7 días y la app lo envía en cada petición. El nombre se compara sin distinguir mayúsculas, tildes ni espacios repetidos, y los errores no revelan cuál de los dos datos falló.
+**Decisión.**
+1. **Camino principal: "Continuar con Google".** La app muestra el selector de cuentas del teléfono (`google_sign_in`) y recibe un token de identidad que Google firma. La app lo envía a `POST /auth/google`; el backend lo comprueba con Google (firma, vencimiento y que se emitió para esta app, con el *ID de cliente web* `GOOGLE_CLIENT_ID`) y exige que el correo esté verificado. Si el correo ya existe como tutor entra a esa cuenta (así se conservan los niños de las cuentas creadas antes); si no, la crea con el nombre y el correo de Google.
+2. En ambos casos el backend entrega el mismo token propio (JWT, 7 días) que la app envía en cada petición.
+3. **Nombre y correo sin verificar** (`/auth/register` y `/auth/login`) quedan **apagados por defecto** y solo se encienden para pruebas con `ENABLE_BASIC_LOGIN=true` en el servidor (y `--dart-define=BASIC_LOGIN=true` al compilar la app).
+4. Al cerrar sesión la app también cierra la sesión de Google, para que la siguiente vez aparezca el selector de cuentas.
+
+**Alternativas consideradas.**
+- *Contraseña:* más fricción y obliga a guardar contraseñas de forma segura.
+- *Código de un solo uso enviado al correo:* seguro, pero requiere un servicio de envío de correos. Queda como complemento posible para quien no tenga cuenta de Google.
+- *Solo nombre y correo (el diseño inicial):* el nombre no es un secreto; quien lo conozca entraba como el tutor, veía el progreso e historias de sus niños y podía borrar sus perfiles.
 
 **Alternativas consideradas.**
 - *Contraseña:* más conocida, pero más fricción y obliga a guardar contraseñas de forma segura.
 - *Código de un solo uso enviado al correo:* seguro y sin contraseñas, pero requiere un servicio de envío de correos.
 
 **Consecuencias.**
-- (+) Registro e inicio de sesión muy simples.
-- (−) **El nombre no es un secreto:** quien conozca el nombre y el correo de un tutor puede entrar como él, ver el progreso e historias de sus niños y borrar sus perfiles.
-- Mitigaciones actuales: los niños solo tienen apodo y rango de edad; no se guarda el audio de su voz; los tokens vencen; y cada recurso se verifica contra el tutor de la sesión.
-- ⚠️ **Mejora prevista:** reemplazar el nombre por un código enviado al correo antes de abrir la app a usuarios reales. Está pendiente averiguar si la universidad ofrece un servicio de correo.
+- (+) El correo está verificado por Google: nadie entra con el correo de otra persona. No se guardan contraseñas.
+- (+) El ID de cliente web no es un secreto; los tokens de Google no se guardan, solo se comprueban.
+- (−) Hace falta una cuenta de Google y que el teléfono tenga los servicios de Google.
+- (−) **Cada llave de firma de la app necesita su huella SHA-1 registrada** en Google Cloud (una por computador de desarrollo y una para la versión publicada); si falta, el selector de cuentas falla en ese teléfono.
+- (−) Mientras la pantalla de consentimiento de Google esté en modo de prueba, solo entran los usuarios de prueba registrados (máximo 100).
+- (−) Los tutores que se registraron con nombre y correo pasan a la misma cuenta si entran con ese mismo correo de Google; si usaban un correo que no es de Google, no podrán entrar.
+- (−) La app usa el paquete `google_sign_in` 6.x, que depende de la API clásica de Google; si Google la retira habrá que migrar a la versión nueva.
 
 ---
 
