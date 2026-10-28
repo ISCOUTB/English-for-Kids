@@ -14,6 +14,7 @@ class TalkingCharacter extends StatefulWidget {
     required this.speakingLanguage,
     required this.onTap,
     this.height = 150,
+    this.canvasFill = 1.0,
   });
 
   /// Carpeta del personaje dentro de assets/personajes/ (nino o nina).
@@ -26,7 +27,13 @@ class TalkingCharacter extends StatefulWidget {
   final Lang? speakingLanguage;
 
   final VoidCallback onTap;
+
+  /// Altura que debe verse del PERSONAJE.
   final double height;
+
+  /// Fracción de la altura del PNG que ocupa el personaje. El PNG se agranda
+  /// para compensar el margen transparente; el sobrante no se ve.
+  final double canvasFill;
 
   @override
   State<TalkingCharacter> createState() => _TalkingCharacterState();
@@ -90,7 +97,7 @@ class _TalkingCharacterState extends State<TalkingCharacter> {
 
   Future<void> _tap() async {
     widget.onTap();
-    setState(() => _scale = 1.08);
+    setState(() => _scale = 1.06);
     await Future<void>.delayed(const Duration(milliseconds: 140));
     if (!mounted) return;
     setState(() => _scale = 1);
@@ -100,6 +107,7 @@ class _TalkingCharacterState extends State<TalkingCharacter> {
   Widget build(BuildContext context) {
     final frame = _talking ? kMouthSequence[_step % kMouthSequence.length] : 1;
     final path = _path(frame);
+    final imageHeight = widget.height / widget.canvasFill;
 
     return AnimatedScale(
       scale: _scale,
@@ -113,19 +121,32 @@ class _TalkingCharacterState extends State<TalkingCharacter> {
           child: SizedBox(
             height: widget.height,
             width: double.infinity,
-            child: Image.asset(
-              path,
-              fit: BoxFit.contain,
-              gaplessPlayback: true,
-              errorBuilder: (_, __, ___) {
-                debugPrint('⚠️ No se encontró $path');
-                return Center(
-                  child: Text(
-                    widget.folder == 'nino' ? '🧒' : '👧',
-                    style: const TextStyle(fontSize: 64),
-                  ),
-                );
-              },
+            // El PNG es más grande que la caja: los márgenes transparentes
+            // se salen sin verse y el personaje llena la altura pedida.
+            child: OverflowBox(
+              alignment: Alignment.center,
+              minWidth: 0,
+              maxWidth: double.infinity,
+              minHeight: 0,
+              maxHeight: double.infinity,
+              child: Image.asset(
+                path,
+                height: imageHeight,
+                fit: BoxFit.fitHeight,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) {
+                  debugPrint('⚠️ No se encontró $path');
+                  return SizedBox(
+                    height: widget.height,
+                    child: Center(
+                      child: Text(
+                        widget.folder == 'nino' ? '🧒' : '👧',
+                        style: const TextStyle(fontSize: 64),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),

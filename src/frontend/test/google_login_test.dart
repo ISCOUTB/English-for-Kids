@@ -5,7 +5,9 @@ import 'package:english_for_kids/core/session_storage.dart';
 import 'package:english_for_kids/features/auth/auth_controller.dart';
 import 'package:english_for_kids/features/auth/auth_service.dart';
 import 'package:english_for_kids/features/auth/google_account_picker.dart';
+import 'package:english_for_kids/features/auth/login_screen.dart';
 import 'package:english_for_kids/features/auth/tutor.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -90,6 +92,38 @@ class _FailingGoogleSignIn extends GoogleSignIn {
 const _tutorJson = {'id': 1, 'nombre': 'Ana Gómez', 'correo': 'ana@gmail.com'};
 
 void main() {
+  group('LoginScreen', () {
+    testWidgets('muestra el botón de Google y no el formulario de pruebas', (tester) async {
+      final t = _build((_) async => _json({}));
+      await tester.pumpWidget(MaterialApp(home: LoginScreen(auth: t.auth)));
+
+      expect(find.text('Continuar con Google'), findsOneWidget);
+      expect(find.byType(GoogleLogo), findsOneWidget);
+      expect(find.text('Nombre'), findsNothing);
+    });
+
+    testWidgets('tocar el botón abre el selector de cuentas', (tester) async {
+      final t = _build((_) async => _json({}));
+      t.picker.token = null; // el usuario cierra el selector
+      await tester.pumpWidget(MaterialApp(home: LoginScreen(auth: t.auth)));
+
+      await tester.tap(find.text('Continuar con Google'));
+      await tester.pump();
+      expect(t.auth.error, isNull);
+    });
+
+    testWidgets('muestra el error debajo del logo', (tester) async {
+      final t = _build((_) async => _json({}));
+      t.picker.error = GoogleSignInFailure('No hay conexión a internet.');
+      await tester.pumpWidget(MaterialApp(home: LoginScreen(auth: t.auth)));
+
+      await tester.tap(find.text('Continuar con Google'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('No hay conexión a internet.'), findsOneWidget);
+    });
+  });
+
   group('signInWithGoogle', () {
     test('envía el token a /auth/google y abre la sesión', () async {
       final t = _build((req) async {

@@ -14,7 +14,6 @@ import '../children/children_service.dart';
 import '../consent/consent_controller.dart';
 import '../consent/consent_screen.dart';
 import '../consent/consent_service.dart';
-import '../progress/progress_screen.dart';
 import '../progress/progress_service.dart';
 import '../stories/stories_service.dart';
 import '../study/progress_repository.dart';
@@ -87,22 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
           consent: _consent,
           speech: _speech,
           progress: _progress,
+          progressService: _progressService,
           stories: _stories,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openProgress(Child child) async {
-    // Zona del tutor: pregunta de adultos para que un niño pequeño no entre solo.
-    if (!await askParentalGate(context)) return;
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ProgressScreen(
-          child: child,
-          service: _progressService,
-          repository: _progress,
         ),
       ),
     );
@@ -118,6 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _deleteChild(Child child) async {
+    // Eliminar un perfil es cosa de adultos: se pide la suma.
+    if (!await askParentalGate(context)) return;
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -244,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: child,
                           isActive: child.id == _children.activeId,
                           onTap: () => _openChild(child),
-                          onProgress: () => _openProgress(child),
                           onDelete: () => _deleteChild(child),
                         ),
                       _AddCard(onTap: _addChild),
@@ -265,14 +252,12 @@ class _ChildCard extends StatelessWidget {
     required this.child,
     required this.isActive,
     required this.onTap,
-    required this.onProgress,
     required this.onDelete,
   });
 
   final Child child;
   final bool isActive;
   final VoidCallback onTap;
-  final VoidCallback onProgress;
   final VoidCallback onDelete;
 
   @override
@@ -312,21 +297,8 @@ class _ChildCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
-                    Text(
-                      ageLabel(child.rangoEdad),
-                      style: theme.textTheme.bodySmall,
-                    ),
                   ],
                 ),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              child: IconButton(
-                tooltip: 'Ver progreso (adultos)',
-                icon: const Icon(Icons.bar_chart_rounded, size: 24),
-                onPressed: onProgress,
               ),
             ),
             Positioned(
@@ -336,11 +308,9 @@ class _ChildCard extends StatelessWidget {
                 tooltip: 'Opciones',
                 icon: const Icon(Icons.more_vert, size: 22),
                 onSelected: (value) {
-                  if (value == 'progress') onProgress();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'progress', child: Text('Ver progreso')),
                   PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                 ],
               ),

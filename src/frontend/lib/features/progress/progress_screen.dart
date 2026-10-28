@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/parental_gate.dart';
 import '../../core/widgets.dart';
 import '../children/avatars.dart';
 import '../children/child.dart';
@@ -18,7 +19,8 @@ const Color _kGreen = Color(0xFFC8E6C9);
 const Color _kOrange = Color(0xFFFFCCBC);
 const Color _kBlue = Color(0xFFBBDEFB);
 
-/// Panel del tutor: cómo va un niño. Se abre detrás de la pregunta para adultos.
+/// Panel del tutor: cómo va un niño. Verlo es libre; borrar el progreso pide
+/// la pregunta para adultos.
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({
     super.key,
@@ -57,6 +59,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Future<void> _confirmReset() async {
+    // Borrar es cosa de adultos: aquí sí se pide la suma.
+    if (!await askParentalGate(context)) return;
+    if (!mounted) return;
     final name = widget.child.apodo;
     final confirm = await showDialog<bool>(
       context: context,

@@ -19,7 +19,6 @@ class _AddChildSheetState extends State<AddChildSheet> {
   final _formKey = GlobalKey<FormState>();
   final _apodo = TextEditingController();
 
-  String _range = kAgeRanges.first;
   String _avatar = kAvatars.keys.first;
   bool _saving = false;
   String? _error;
@@ -41,7 +40,7 @@ class _AddChildSheetState extends State<AddChildSheet> {
 
     final error = await widget.controller.add(
       apodo: _apodo.text.trim(),
-      rangoEdad: _range,
+      rangoEdad: kDefaultAgeRange,
       avatar: _avatar,
     );
 
@@ -97,19 +96,6 @@ class _AddChildSheetState extends State<AddChildSheet> {
                   return null;
                 },
                 onFieldSubmitted: (_) => _save(),
-              ),
-              const SizedBox(height: 18),
-              Text('Edad', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final r in kAgeRanges)
-                    ButtonSegment(value: r, label: Text(ageLabel(r))),
-                ],
-                selected: {_range},
-                onSelectionChanged:
-                    _saving ? null : (s) => setState(() => _range = s.first),
               ),
               const SizedBox(height: 18),
               Text('Elige un amigo', style: theme.textTheme.titleSmall),

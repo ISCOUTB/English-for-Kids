@@ -8,6 +8,21 @@ const Map<Lang, String> kCharacterFolder = {
   Lang.es: 'nino',
 };
 
+/// Orden de izquierda a derecha en la pantalla de estudio.
+const List<Lang> kLanguageOrder = [Lang.es, Lang.en];
+
+// --- Tamaño de los personajes (ajustables) ---
+
+/// Fracción de la altura del PNG que ocupa el personaje (el resto es margen
+/// transparente). Con 677x369 el niño ocupa ~0.6. Si recortas los PNG justo al
+/// personaje, pon 1.0.
+const double kCharacterCanvasFill = 0.6;
+
+/// Cuánto sobresale el personaje por arriba y por abajo del círculo
+/// (fracción del diámetro del círculo).
+const double kCharacterRise = 0.10;
+const double kCharacterDrop = 0.08;
+
 /// Cada cuánto cambia la boca mientras suena el audio.
 const Duration kMouthFrameInterval = Duration(milliseconds: 120);
 

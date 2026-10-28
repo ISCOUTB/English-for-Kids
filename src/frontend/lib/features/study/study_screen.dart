@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -10,8 +12,36 @@ import 'study_config.dart';
 import 'study_session.dart';
 import 'talking_character.dart';
 
-/// Estudio de una palabra: imagen arriba; abajo, un personaje por idioma y
-/// el micrófono en el centro. El idioma activo se resalta.
+/// Colores de cada idioma: círculo detrás del personaje, burbuja y acento.
+class _LangStyle {
+  const _LangStyle({
+    required this.circle,
+    required this.bubble,
+    required this.accent,
+  });
+
+  final Color circle;
+  final Color bubble;
+  final Color accent;
+}
+
+const Map<Lang, _LangStyle> _styles = {
+  // Español: verde
+  Lang.es: _LangStyle(
+    circle: Color(0xFFC5E8B7),
+    bubble: Color(0xFFE2F3DA),
+    accent: Color(0xFF43A047),
+  ),
+  // Inglés: lavanda
+  Lang.en: _LangStyle(
+    circle: Color(0xFFD9CCF2),
+    bubble: Color(0xFFECE5F9),
+    accent: Color(0xFF7E57C2),
+  ),
+};
+
+/// Estudio de una palabra: imagen arriba, un personaje por idioma con su
+/// burbuja, y el micrófono en un panel abajo. El idioma activo se resalta.
 class StudyScreen extends StatefulWidget {
   const StudyScreen({
     super.key,
@@ -89,9 +119,11 @@ class _StudyScreenState extends State<StudyScreen> {
         return _mic.message ?? '';
       case MicState.ready:
         if (_mic.transitioning) return '🔊';
-        return allowed ? 'Toca el micrófono y repite 🎤' : 'Voz sin permiso';
+        return allowed ? '¡Toca para hablar!' : 'Voz sin permiso';
     }
   }
+
+  String _caption(Lang lang) => lang == Lang.en ? _word.en : _word.es;
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +139,9 @@ class _StudyScreenState extends State<StudyScreen> {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([_audio, _mic, widget.session.consent]),
+          listenable: Listenable.merge(
+            [_audio, _mic, widget.session.consent],
+          ),
           builder: (context, _) {
             final allowed = widget.session.consent.voiceAllowed;
             final complete = _mic.wordComplete;
@@ -115,9 +149,10 @@ class _StudyScreenState extends State<StudyScreen> {
             return Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
                   child: Column(
                     children: [
+                      // Imagen de la palabra
                       Expanded(
                         child: Row(
                           children: [
@@ -126,20 +161,10 @@ class _StudyScreenState extends State<StudyScreen> {
                               onTap: () => _go(-1),
                             ),
                             Expanded(
-                              child: Material(
-                                color: Colors.white,
-                                clipBehavior: Clip.antiAlias,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                  side: const BorderSide(
-                                    color: Color(0xFFEADFCB),
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20),
-                                  child: WordImage(word: word, emojiSize: 140),
-                                ),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: WordImage(word: word, emojiSize: 140),
                               ),
                             ),
                             _ArrowButton(
@@ -149,66 +174,81 @@ class _StudyScreenState extends State<StudyScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+
+                      // Personajes con su burbuja
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _CharacterColumn(
-                              language: Lang.en,
-                              caption: word.en,
-                              speaking: _audio.speaking,
-                              isActive: _mic.activeLang == Lang.en,
-                              isDone: _mic.doneEn,
-                              onTap: () => _mic.selectLanguage(Lang.en),
+                          for (final lang in kLanguageOrder)
+                            Expanded(
+                              child: _CharacterColumn(
+                                language: lang,
+                                caption: _caption(lang),
+                                speaking: _audio.speaking,
+                                isActive: _mic.activeLang == lang,
+                                isDone: lang == Lang.en
+                                    ? _mic.doneEn
+                                    : _mic.doneEs,
+                                onTap: () => _mic.selectLanguage(lang),
+                              ),
                             ),
-                          ),
-                          _MicButton(
-                            state: _mic.state,
-                            enabled: allowed && !_mic.transitioning,
-                            level: _mic.soundLevel,
-                            onTap: _onMic,
-                          ),
-                          Expanded(
-                            child: _CharacterColumn(
-                              language: Lang.es,
-                              caption: word.es,
-                              speaking: _audio.speaking,
-                              isActive: _mic.activeLang == Lang.es,
-                              isDone: _mic.doneEs,
-                              onTap: () => _mic.selectLanguage(Lang.es),
-                            ),
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 30,
-                        child: Center(
-                          child: Text(
-                            _feedback(allowed),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+
                       if (complete) ...[
-                        const SizedBox(height: 8),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: FilledButton.icon(
                             onPressed: () => _go(1),
-                            icon: const Icon(Icons.arrow_forward, size: 32),
+                            icon: const Icon(Icons.arrow_forward, size: 30),
                             label: const Text('Siguiente'),
                             style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(68),
+                              minimumSize: const Size.fromHeight(60),
                               backgroundColor: Colors.green,
                             ),
                           ),
                         ),
+                        const SizedBox(height: 10),
                       ],
+
+                      // Panel del micrófono
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: const Color(0xFFEADFCB),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: 26,
+                              child: Center(
+                                child: Text(
+                                  _feedback(allowed),
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _MicButton(
+                              state: _mic.state,
+                              enabled: allowed && !_mic.transitioning,
+                              level: _mic.soundLevel,
+                              onTap: _onMic,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -239,14 +279,16 @@ class _ArrowButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onTap,
-      iconSize: 36,
-      constraints: const BoxConstraints(minWidth: 48, minHeight: 80),
+      iconSize: 32,
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 80),
       padding: EdgeInsets.zero,
       icon: Icon(icon),
     );
   }
 }
 
+/// Personaje dentro de un círculo de color (sin "piso") y su burbuja debajo.
+/// El personaje sobresale un poco por arriba y por abajo del círculo.
 class _CharacterColumn extends StatelessWidget {
   const _CharacterColumn({
     required this.language,
@@ -266,63 +308,166 @@ class _CharacterColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final style = _styles[language]!;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Brillo suave alrededor del personaje del idioma activo.
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isActive ? primary : Colors.transparent,
-              width: 3,
-            ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: primary.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : const [],
-          ),
-          child: TalkingCharacter(
-            folder: kCharacterFolder[language]!,
-            language: language,
-            speakingLanguage: speaking,
-            onTap: onTap,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(constraints.maxWidth - 8, 180.0);
+        final rise = size * kCharacterRise;
+        final drop = size * kCharacterDrop;
+        final total = size + rise + drop;
+
+        return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  caption,
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+            SizedBox(
+              width: size,
+              height: total,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // El círculo del idioma activo se ve más fuerte y con brillo.
+                  Positioned(
+                    left: 0,
+                    top: rise,
+                    width: size,
+                    height: size,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isActive
+                            ? style.circle
+                            : style.circle.withValues(alpha: 0.5),
+                        border: Border.all(
+                          color: isActive ? style.accent : Colors.transparent,
+                          width: 4,
+                        ),
+                        boxShadow: isActive
+                            ? [
+                                BoxShadow(
+                                  color: style.accent.withValues(alpha: 0.35),
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : const [],
+                      ),
+                    ),
                   ),
-                ),
+                  // El personaje ocupa toda la altura y sobresale del círculo.
+                  Positioned.fill(
+                    child: TalkingCharacter(
+                      folder: kCharacterFolder[language]!,
+                      language: language,
+                      speakingLanguage: speaking,
+                      onTap: onTap,
+                      height: total,
+                      canvasFill: kCharacterCanvasFill,
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (isDone) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.check_circle, color: Colors.green, size: 20),
-            ],
+            const SizedBox(height: 6),
+            _SpeechBubble(
+              text: caption,
+              color: style.bubble,
+              accent: style.accent,
+              isDone: isDone,
+              width: math.min(constraints.maxWidth - 8, 190.0),
+              onTap: onTap,
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
+}
+
+class _SpeechBubble extends StatelessWidget {
+  const _SpeechBubble({
+    required this.text,
+    required this.color,
+    required this.accent,
+    required this.isDone,
+    required this.width,
+    required this.onTap,
+  });
+
+  final String text;
+  final Color color;
+  final Color accent;
+  final bool isDone;
+  final double width;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: width,
+        child: CustomPaint(
+          painter: _BubblePainter(color),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 20, 12, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.volume_up_rounded, color: accent, size: 24),
+                if (isDone) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Globo de diálogo con la colita hacia arriba (apunta al personaje).
+class _BubblePainter extends CustomPainter {
+  const _BubblePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const tail = 10.0;
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, tail, size.width, size.height - tail),
+      const Radius.circular(22),
+    );
+    final path = Path()
+      ..addRRect(body)
+      ..moveTo(size.width / 2 - 12, tail)
+      ..lineTo(size.width / 2, 0)
+      ..lineTo(size.width / 2 + 12, tail)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_BubblePainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _MicButton extends StatefulWidget {
@@ -387,34 +532,31 @@ class _MicButtonState extends State<_MicButton>
     final Widget icon;
     if (!widget.enabled) {
       background = Colors.grey.shade400;
-      icon = const Icon(Icons.mic_off, color: Colors.white, size: 44);
+      icon = const Icon(Icons.mic_off, color: Colors.white, size: 40);
     } else {
       switch (widget.state) {
         case MicState.listening:
           background = Colors.redAccent;
-          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+          icon = const Icon(Icons.mic, color: Colors.white, size: 44);
         case MicState.processing:
           background = scheme.primary;
           icon = const SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 4,
-              color: Colors.white,
-            ),
+            width: 30,
+            height: 30,
+            child: CircularProgressIndicator(strokeWidth: 4, color: Colors.white),
           );
         case MicState.success:
           background = Colors.green;
-          icon = const Icon(Icons.star, color: Colors.white, size: 48);
+          icon = const Icon(Icons.star, color: Colors.white, size: 44);
         case MicState.tryAgain:
           background = scheme.primary;
-          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+          icon = const Icon(Icons.mic, color: Colors.white, size: 44);
         case MicState.unavailable:
           background = Colors.grey.shade500;
-          icon = const Icon(Icons.mic_off, color: Colors.white, size: 44);
+          icon = const Icon(Icons.mic_off, color: Colors.white, size: 40);
         case MicState.ready:
           background = scheme.primary;
-          icon = const Icon(Icons.mic, color: Colors.white, size: 48);
+          icon = const Icon(Icons.mic, color: Colors.white, size: 44);
       }
     }
 
@@ -422,31 +564,46 @@ class _MicButtonState extends State<_MicButton>
       button: true,
       label: 'Micrófono',
       child: SizedBox(
-        width: 140,
-        height: 140,
-        child: Center(
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_pulse, widget.level]),
-            builder: (context, child) {
-              final ring = 96 + 18 * _pulse.value + 30 * widget.level.value;
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (listening)
-                    Container(
-                      width: ring,
-                      height: ring,
+        width: 104,
+        height: 104,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_pulse, widget.level]),
+          builder: (context, child) {
+            // El anillo exterior crece con el sonido que "oye" el micrófono.
+            final extra = 4 + 8 * _pulse.value + 18 * widget.level.value;
+            return Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                if (listening)
+                  Positioned(
+                    left: -extra,
+                    right: -extra,
+                    top: -extra,
+                    bottom: -extra,
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: background.withValues(
-                          alpha: 0.18 + 0.22 * widget.level.value,
+                          alpha: 0.16 + 0.22 * widget.level.value,
                         ),
                       ),
                     ),
-                  child!,
-                ],
-              );
-            },
+                  ),
+                // Aro suave fijo alrededor del botón
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: background.withValues(alpha: 0.22),
+                    ),
+                  ),
+                ),
+                child!,
+              ],
+            );
+          },
+          child: Center(
             child: Material(
               color: background,
               shape: const CircleBorder(),
@@ -455,8 +612,8 @@ class _MicButtonState extends State<_MicButton>
                 customBorder: const CircleBorder(),
                 onTap: widget.onTap,
                 child: SizedBox(
-                  width: 96,
-                  height: 96,
+                  width: 88,
+                  height: 88,
                   child: Center(child: icon),
                 ),
               ),
